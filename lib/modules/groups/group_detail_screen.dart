@@ -4,6 +4,8 @@ import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_text_styles.dart';
+import '../../widgets/custom_button.dart';
+import '../../widgets/custom_textfield.dart';
 import '../../widgets/responsive_layout.dart';
 import '../../widgets/loading_indicator.dart';
 import 'group_detail_controller.dart';
@@ -21,18 +23,15 @@ class GroupDetailScreen extends GetView<GroupDetailController> {
         actions: [
           IconButton(
             icon: const Icon(Icons.person_add_outlined),
-            onPressed: () {},
-            tooltip: 'Add Member',
+            onPressed: () => _showAddMemberDialog(context),
+            tooltip: 'Add Member to Group',
           ),
-          IconButton(
-            icon: const Icon(Icons.more_vert_rounded),
-            onPressed: () {},
-          ),
+          SizedBox(width: 8.w),
         ],
       ),
       body: Obx(
         () {
-          if (controller.isLoading.value) {
+          if (controller.isLoading.value && controller.group.value == null) {
             return const LoadingIndicator(message: 'Loading group details...');
           }
 
@@ -259,7 +258,6 @@ class GroupDetailScreen extends GetView<GroupDetailController> {
                         itemCount: controller.members.length,
                         itemBuilder: (context, index) {
                           final member = controller.members[index];
-                          final isMe = member.id == 'user_me';
 
                           return Card(
                             margin: EdgeInsets.only(bottom: 8.h),
@@ -267,7 +265,7 @@ class GroupDetailScreen extends GetView<GroupDetailController> {
                               leading: CircleAvatar(
                                 backgroundColor: AppColors.primaryLight,
                                 child: Text(
-                                  member.name[0],
+                                  member.name.isNotEmpty ? member.name[0] : 'U',
                                   style: const TextStyle(
                                     color: AppColors.primary,
                                     fontWeight: FontWeight.bold,
@@ -275,17 +273,17 @@ class GroupDetailScreen extends GetView<GroupDetailController> {
                                 ),
                               ),
                               title: Text(
-                                isMe ? '${member.name} (You)' : member.name,
+                                member.name,
                                 style: AppTextStyles.bodyMedium(isDark: isDark)
                                     .copyWith(fontWeight: FontWeight.bold),
                               ),
                               subtitle: Text(
-                                member.phone,
+                                member.email.isNotEmpty ? member.email : member.phone,
                                 style: AppTextStyles.bodySmall(isDark: isDark),
                               ),
                               trailing: Chip(
                                 label: Text(
-                                  isMe ? 'Creator' : 'Member',
+                                  'Member',
                                   style: TextStyle(
                                     fontSize: 11.sp,
                                     color: AppColors.primary,
@@ -305,6 +303,45 @@ class GroupDetailScreen extends GetView<GroupDetailController> {
           );
         },
       ),
+    );
+  }
+
+  void _showAddMemberDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
+          title: const Text('Add Member to Group'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CustomTextField(
+                label: 'Email or Phone Number',
+                hintText: 'e.g. friend@example.com',
+                controller: controller.addMemberController,
+                keyboardType: TextInputType.emailAddress,
+                prefixIcon: const Icon(Icons.person_add_alt_1_outlined),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Get.back(),
+              child: const Text('Cancel'),
+            ),
+            Obx(
+              () => CustomButton(
+                text: 'Add',
+                width: 100.w,
+                height: 40.h,
+                isLoading: controller.isLoading.value,
+                onPressed: controller.addMemberToGroup,
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 

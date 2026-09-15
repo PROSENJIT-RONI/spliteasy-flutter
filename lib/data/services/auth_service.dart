@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/user_model.dart';
@@ -8,6 +9,7 @@ class AuthService extends GetxService {
   final Rx<UserModel?> currentUser = Rx<UserModel?>(null);
 
   bool get loggedIn => supabase.auth.currentSession != null;
+
   Future<AuthService> init() async {
     await checkAuthStatus();
     return this;
@@ -39,18 +41,37 @@ class AuthService extends GetxService {
         currentUser.value = profile;
         return profile;
       }
-    } catch (_) {
-      // Fallback if profile row is creating
+    } catch (e) {
+      debugPrint('Profile query exception: $e');
     }
 
+    // Auto-heal: If user was created directly in Supabase Dashboard (or trigger hadn't run),
+    // automatically upsert a row into 'profiles' table.
     final meta = authUser.userMetadata ?? {};
+    final defaultName = (meta['name'] as String?)?.isNotEmpty == true
+        ? meta['name'] as String
+        : (authUser.email?.split('@').first ?? 'User');
+
     final fallback = UserModel(
       id: authUser.id,
-      name: meta['name'] as String? ?? authUser.email?.split('@').first ?? 'User',
+      name: defaultName,
       email: authUser.email ?? '',
-      phone: meta['phone'] as String? ?? '',
-      gender: meta['gender'] as String? ?? 'Other',
+      phone: (meta['phone'] as String?) ?? '',
+      gender: (meta['gender'] as String?) ?? 'Other',
     );
+
+    try {
+      await supabase.from('profiles').upsert({
+        'id': authUser.id,
+        'name': fallback.name,
+        'email': fallback.email,
+        'phone': fallback.phone,
+        'gender': fallback.gender,
+      });
+    } catch (err) {
+      debugPrint('Auto-heal profile creation error: $err');
+    }
+
     currentUser.value = fallback;
     return fallback;
   }

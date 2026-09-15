@@ -86,7 +86,11 @@ class CreateGroupScreen extends GetView<CreateGroupController> {
                           selected: isSelected,
                           selectedColor: AppColors.primary,
                           labelStyle: TextStyle(
-                            color: isSelected ? Colors.white : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
+                            color: isSelected
+                                ? Colors.white
+                                : (isDark
+                                    ? AppColors.textPrimaryDark
+                                    : AppColors.textPrimaryLight),
                             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                           ),
                           onSelected: (selected) {
@@ -109,45 +113,92 @@ class CreateGroupScreen extends GetView<CreateGroupController> {
 
                   // Add Members Section
                   Text('Add Members', style: AppTextStyles.h3(isDark: isDark)),
-                  SizedBox(height: 12.h),
+                  SizedBox(height: 8.h),
+
+                  // Add Member Input Box
+                  Row(
+                    children: [
+                      Expanded(
+                        child: CustomTextField(
+                          hintText: 'Enter member email or phone...',
+                          controller: controller.memberInputController,
+                          keyboardType: TextInputType.emailAddress,
+                          prefixIcon: const Icon(Icons.person_add_alt_1_outlined),
+                        ),
+                      ),
+                      SizedBox(width: 8.w),
+                      ElevatedButton(
+                        onPressed: controller.addMemberByInput,
+                        style: ElevatedButton.styleFrom(
+                          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+                        ),
+                        child: const Text('Add'),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 16.h),
+
+                  // Members Checkbox List
                   Obx(
-                    () => Column(
-                      children: controller.availableFriends.map((friend) {
-                        return Obx(
-                          () {
-                            final isSelected = controller.selectedMemberIds.contains(friend.id);
-                            return Card(
-                              margin: EdgeInsets.only(bottom: 8.h),
-                              child: CheckboxListTile(
-                                value: isSelected,
-                                activeColor: AppColors.primary,
-                                title: Text(
-                                  friend.name,
-                                  style: AppTextStyles.bodyMedium(isDark: isDark).copyWith(
-                                    fontWeight: FontWeight.w600,
+                    () {
+                      if (controller.availableFriends.isEmpty) {
+                        return Container(
+                          padding: EdgeInsets.all(16.r),
+                          decoration: BoxDecoration(
+                            color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+                            borderRadius: BorderRadius.circular(12.r),
+                            border: Border.all(
+                              color: isDark ? AppColors.borderDark : AppColors.borderLight,
+                            ),
+                          ),
+                          child: Text(
+                            'No friends added yet. Type an email or phone number above to add members directly to this group!',
+                            textAlign: TextAlign.center,
+                            style: AppTextStyles.bodySmall(isDark: isDark),
+                          ),
+                        );
+                      }
+
+                      return Column(
+                        children: controller.availableFriends.map((friend) {
+                          return Obx(
+                            () {
+                              final isSelected =
+                                  controller.selectedMemberIds.contains(friend.id);
+                              return Card(
+                                margin: EdgeInsets.only(bottom: 8.h),
+                                child: CheckboxListTile(
+                                  value: isSelected,
+                                  activeColor: AppColors.primary,
+                                  title: Text(
+                                    friend.name,
+                                    style: AppTextStyles.bodyMedium(isDark: isDark)
+                                        .copyWith(fontWeight: FontWeight.w600),
                                   ),
-                                ),
-                                subtitle: Text(
-                                  friend.phone,
-                                  style: AppTextStyles.bodySmall(isDark: isDark),
-                                ),
-                                secondary: CircleAvatar(
-                                  backgroundColor: AppColors.primaryLight,
-                                  child: Text(
-                                    friend.name[0],
-                                    style: const TextStyle(
-                                      color: AppColors.primary,
-                                      fontWeight: FontWeight.bold,
+                                  subtitle: Text(
+                                    friend.email.isNotEmpty
+                                        ? friend.email
+                                        : friend.phone,
+                                    style: AppTextStyles.bodySmall(isDark: isDark),
+                                  ),
+                                  secondary: CircleAvatar(
+                                    backgroundColor: AppColors.primaryLight,
+                                    child: Text(
+                                      friend.name.isNotEmpty ? friend.name[0] : 'F',
+                                      style: const TextStyle(
+                                        color: AppColors.primary,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                   ),
+                                  onChanged: (_) => controller.toggleMember(friend.id),
                                 ),
-                                onChanged: (_) => controller.toggleMember(friend.id),
-                              ),
-                            );
-                          },
-                        );
-                      }).toList(),
-                    ),
+                              );
+                            },
+                          );
+                        }).toList(),
+                      );
+                    },
                   ),
                   SizedBox(height: 32.h),
 

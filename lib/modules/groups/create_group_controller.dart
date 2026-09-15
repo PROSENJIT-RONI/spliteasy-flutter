@@ -12,6 +12,7 @@ class CreateGroupController extends GetxController {
   final formKey = GlobalKey<FormState>();
   final nameController = TextEditingController();
   final descriptionController = TextEditingController();
+  final memberInputController = TextEditingController();
 
   final RxString selectedEmoji = '🏖️'.obs;
   final RxString selectedCategory = 'Trip'.obs;
@@ -41,6 +42,34 @@ class CreateGroupController extends GetxController {
     }
   }
 
+  Future<void> addMemberByInput() async {
+    final input = memberInputController.text.trim();
+    if (input.isEmpty) {
+      CustomToast.error('Please enter email or phone number');
+      return;
+    }
+
+    isLoading.value = true;
+    try {
+      final friend = await _friendService.addFriendByPhone(input);
+      if (friend != null) {
+        if (!availableFriends.any((f) => f.id == friend.id)) {
+          availableFriends.add(friend);
+        }
+        if (!selectedMemberIds.contains(friend.id)) {
+          selectedMemberIds.add(friend.id);
+        }
+        memberInputController.clear();
+        CustomToast.success('Added ${friend.name} to group!');
+      }
+    } catch (e) {
+      final msg = e.toString().replaceAll('Exception:', '').trim();
+      CustomToast.error(msg.isNotEmpty ? msg : 'User not found');
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
   Future<void> createGroup() async {
     if (!formKey.currentState!.validate()) return;
 
@@ -67,6 +96,7 @@ class CreateGroupController extends GetxController {
   void onClose() {
     nameController.dispose();
     descriptionController.dispose();
+    memberInputController.dispose();
     super.onClose();
   }
 }

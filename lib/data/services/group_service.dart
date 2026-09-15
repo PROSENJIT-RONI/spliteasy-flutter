@@ -127,4 +127,25 @@ class GroupService extends GetxService {
       return [];
     }
   }
+
+  Future<UserModel> addMemberToGroup(String groupId, String emailOrPhone) async {
+    final profileRes = await supabase
+        .from('profiles')
+        .select()
+        .or('email.eq.$emailOrPhone,phone.eq.$emailOrPhone')
+        .maybeSingle();
+
+    if (profileRes == null) {
+      throw Exception('No user found with email/phone: $emailOrPhone');
+    }
+
+    final user = UserModel.fromJson(profileRes);
+
+    await supabase.from('group_members').upsert({
+      'group_id': groupId,
+      'user_id': user.id,
+    });
+
+    return user;
+  }
 }
