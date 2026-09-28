@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import '../../app/theme/app_colors.dart';
 import '../../widgets/responsive_layout.dart';
 import '../home/home_screen.dart';
-import '../groups/groups_screen.dart';
-import '../balances/balances_screen.dart';
-import '../friends/friends_screen.dart';
-import '../activity/activity_screen.dart';
+import '../trips/trips_screen.dart';
 import '../profile/profile_screen.dart';
 import 'main_navigation_controller.dart';
 
@@ -16,78 +13,65 @@ class MainNavigationScreen extends GetView<MainNavigationController> {
 
   static const List<Widget> _pages = [
     HomeScreen(),
-    GroupsScreen(),
-    BalancesScreen(),
-    FriendsScreen(),
-    ActivityScreen(),
+    TripsScreen(),
     ProfileScreen(),
   ];
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isDesktop = MediaQuery.of(context).size.width >= 900;
 
-    return ResponsiveLayout(
-      // Mobile View (<600px width): Bottom Navigation Bar
-      mobile: Obx(
-        () => Scaffold(
-          body: IndexedStack(
-            index: controller.currentIndex.value,
-            children: _pages,
-          ),
-          bottomNavigationBar: BottomNavigationBar(
-            currentIndex: controller.currentIndex.value,
-            onTap: controller.changePage,
-            type: BottomNavigationBarType.fixed,
-            selectedItemColor: AppColors.primary,
-            unselectedItemColor: isDark
-                ? AppColors.textSecondaryDark
-                : AppColors.textSecondaryLight,
-            items: const [
-              BottomNavigationBarItem(
-                icon: Icon(Icons.home_outlined),
-                activeIcon: Icon(Icons.home_rounded),
-                label: 'Home',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.group_outlined),
-                activeIcon: Icon(Icons.group_rounded),
-                label: 'Groups',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.account_balance_wallet_outlined),
-                activeIcon: Icon(Icons.account_balance_wallet_rounded),
-                label: 'Balances',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.people_outline),
-                activeIcon: Icon(Icons.people_rounded),
-                label: 'Friends',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.history_outlined),
-                activeIcon: Icon(Icons.history_rounded),
-                label: 'Activity',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.person_outline),
-                activeIcon: Icon(Icons.person_rounded),
-                label: 'Profile',
-              ),
-            ],
-          ),
-          floatingActionButton: FloatingActionButton(
-            heroTag: 'main_mobile_fab',
-            onPressed: controller.goToAddExpense,
-            backgroundColor: AppColors.primary,
-            child: Icon(Icons.add, color: Colors.white, size: 28.sp),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        final shouldExit = await _showExitDialog(context);
+        if (shouldExit == true) {
+          SystemNavigator.pop();
+        }
+      },
+      child: ResponsiveLayout(
+        // Mobile View (<600px width): Bottom Navigation Bar
+        mobile: Obx(
+          () => Scaffold(
+            body: IndexedStack(
+              index: controller.currentIndex.value,
+              children: _pages,
+            ),
+            bottomNavigationBar: BottomNavigationBar(
+              currentIndex: controller.currentIndex.value,
+              onTap: controller.changePage,
+              type: BottomNavigationBarType.fixed,
+              selectedItemColor: AppColors.primary,
+              unselectedItemColor: isDark
+                  ? AppColors.textSecondaryDark
+                  : AppColors.textSecondaryLight,
+              items: const [
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.home_outlined),
+                  activeIcon: Icon(Icons.home_rounded),
+                  label: 'Home',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.card_travel_outlined),
+                  activeIcon: Icon(Icons.card_travel_rounded),
+                  label: 'Trips',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.person_outline),
+                  activeIcon: Icon(Icons.person_rounded),
+                  label: 'Profile',
+                ),
+              ],
+            ),
           ),
         ),
-      ),
 
-      // Tablet / Desktop View (>= 600px width): Side Navigation Rail
-      tablet: _buildDesktopLayout(context, isDark, isDesktop: false),
-      desktop: _buildDesktopLayout(context, isDark, isDesktop: true),
+        // Tablet / Desktop View (>= 600px width): Side Navigation Rail
+        tablet: _buildDesktopLayout(context, isDark, isDesktop: false),
+        desktop: _buildDesktopLayout(context, isDark, isDesktop: isDesktop),
+      ),
     );
   }
 
@@ -100,29 +84,29 @@ class MainNavigationScreen extends GetView<MainNavigationController> {
               selectedIndex: controller.currentIndex.value,
               onDestinationSelected: controller.changePage,
               extended: isDesktop,
-              minExtendedWidth: 200,
+              minExtendedWidth: 180,
               leading: Padding(
-                padding: EdgeInsets.symmetric(vertical: 20.h),
+                padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 12.0),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Image.asset(
                       'assets/logos/logo.png',
-                      width: 36.w,
-                      height: 36.w,
-                      errorBuilder: (context, error, stackTrace) => Icon(
-                        Icons.call_split_rounded,
-                        size: 32.sp,
+                      width: 32,
+                      height: 32,
+                      errorBuilder: (context, error, stackTrace) => const Icon(
+                        Icons.flight_takeoff_rounded,
+                        size: 28,
                         color: AppColors.primary,
                       ),
                     ),
                     if (isDesktop) ...[
-                      SizedBox(width: 12.w),
-                      Text(
+                      const SizedBox(width: 10),
+                      const Text(
                         'SplitEasy',
                         style: TextStyle(
                           fontFamily: 'Roboto',
-                          fontSize: 20.sp,
+                          fontSize: 18,
                           fontWeight: FontWeight.bold,
                           color: AppColors.primary,
                         ),
@@ -133,34 +117,19 @@ class MainNavigationScreen extends GetView<MainNavigationController> {
               ),
               destinations: const [
                 NavigationRailDestination(
-                  icon: Icon(Icons.home_outlined),
-                  selectedIcon: Icon(Icons.home_rounded),
-                  label: Text('Home'),
+                  icon: Icon(Icons.home_outlined, size: 20),
+                  selectedIcon: Icon(Icons.home_rounded, size: 20),
+                  label: Text('Home', style: TextStyle(fontSize: 14)),
                 ),
                 NavigationRailDestination(
-                  icon: Icon(Icons.group_outlined),
-                  selectedIcon: Icon(Icons.group_rounded),
-                  label: Text('Groups'),
+                  icon: Icon(Icons.card_travel_outlined, size: 20),
+                  selectedIcon: Icon(Icons.card_travel_rounded, size: 20),
+                  label: Text('Trips', style: TextStyle(fontSize: 14)),
                 ),
                 NavigationRailDestination(
-                  icon: Icon(Icons.account_balance_wallet_outlined),
-                  selectedIcon: Icon(Icons.account_balance_wallet_rounded),
-                  label: Text('Balances'),
-                ),
-                NavigationRailDestination(
-                  icon: Icon(Icons.people_outline),
-                  selectedIcon: Icon(Icons.people_rounded),
-                  label: Text('Friends'),
-                ),
-                NavigationRailDestination(
-                  icon: Icon(Icons.history_outlined),
-                  selectedIcon: Icon(Icons.history_rounded),
-                  label: Text('Activity'),
-                ),
-                NavigationRailDestination(
-                  icon: Icon(Icons.person_outline),
-                  selectedIcon: Icon(Icons.person_rounded),
-                  label: Text('Profile'),
+                  icon: Icon(Icons.person_outline, size: 20),
+                  selectedIcon: Icon(Icons.person_rounded, size: 20),
+                  label: Text('Profile', style: TextStyle(fontSize: 14)),
                 ),
               ],
             ),
@@ -173,14 +142,98 @@ class MainNavigationScreen extends GetView<MainNavigationController> {
             ),
           ],
         ),
-        floatingActionButton: FloatingActionButton.extended(
-          heroTag: 'main_desktop_fab',
-          onPressed: controller.goToAddExpense,
-          backgroundColor: AppColors.primary,
-          icon: const Icon(Icons.add, color: Colors.white),
-          label: const Text('Add Expense', style: TextStyle(color: Colors.white)),
-        ),
       ),
+    );
+  }
+
+  Future<bool?> _showExitDialog(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          elevation: 8,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 400),
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: const BoxDecoration(
+                      color: AppColors.primaryLight,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.power_settings_new_rounded,
+                      color: AppColors.primary,
+                      size: 28,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Exit SplitEasy?',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Are you sure you want to close the application?',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          onPressed: () => Navigator.of(context).pop(false),
+                          child: const Text('Cancel'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          onPressed: () => Navigator.of(context).pop(true),
+                          child: const Text(
+                            'Exit App',
+                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

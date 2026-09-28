@@ -28,7 +28,7 @@ class LoginController extends GetxController {
         emailController.text.trim(),
         passwordController.text.trim(),
       );
-      CustomToast.success('Welcome back to SplitEasy!');
+      CustomToast.success('Admin Login Successful!');
       Get.offAllNamed(Routes.main);
     } catch (e) {
       String msg = 'Login failed';
@@ -41,10 +41,6 @@ class LoginController extends GetxController {
     } finally {
       isLoading.value = false;
     }
-  }
-
-  void goToRegister() {
-    Get.toNamed(Routes.register);
   }
 
   @override

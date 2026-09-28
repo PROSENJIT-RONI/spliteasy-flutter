@@ -1,42 +1,34 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:image_picker/image_picker.dart';
-import '../../data/models/expense_model.dart';
-import '../../data/models/group_model.dart';
-import '../../data/models/user_model.dart';
-import '../../data/services/auth_service.dart';
+import '../../data/models/trip_expense_model.dart';
+import '../../data/models/trip_person_model.dart';
+import '../../data/services/trip_service.dart';
 import '../../data/services/expense_service.dart';
-import '../../data/services/group_service.dart';
-import '../../data/services/friend_service.dart';
-import '../../data/services/storage_service.dart';
 import '../../widgets/custom_toast.dart';
 
 class AddExpenseController extends GetxController {
+  final TripService _tripService = Get.find<TripService>();
   final ExpenseService _expenseService = Get.find<ExpenseService>();
-  final GroupService _groupService = Get.find<GroupService>();
-  final FriendService _friendService = Get.find<FriendService>();
-  final StorageService _storageService = Get.find<StorageService>();
-  final AuthService _authService = Get.find<AuthService>();
 
   final formKey = GlobalKey<FormState>();
   final descriptionController = TextEditingController();
   final amountController = TextEditingController();
+  final noteController = TextEditingController();
 
-  final Rx<GroupModel?> selectedGroup = Rx<GroupModel?>(null);
-  final RxList<GroupModel> groups = <GroupModel>[].obs;
-
-  final RxList<UserModel> availableParticipants = <UserModel>[].obs;
+  final RxList<TripPersonModel> tripPeople = <TripPersonModel>[].obs;
   final RxList<String> selectedParticipantIds = <String>[].obs;
+  final RxString selectedPaidByPersonId = ''.obs;
 
-  final RxString selectedPaidByUserId = ''.obs;
   final Rx<SplitType> selectedSplitType = SplitType.equal.obs;
   final RxString selectedCategory = 'Food'.obs;
+  final Rx<DateTime> expenseDate = DateTime.now().obs;
 
   final RxMap<String, TextEditingController> customShareControllers =
       <String, TextEditingController>{}.obs;
 
-  final Rx<String?> receiptImagePath = Rx<String?>(null);
   final RxBool isLoading = false.obs;
+
+  TripExpenseModel? existingExpense;
 
   final List<Map<String, dynamic>> categories = [
     {'name': 'Food', 'icon': Icons.restaurant_rounded},
@@ -47,144 +39,251 @@ class AddExpenseController extends GetxController {
     {'name': 'Other', 'icon': Icons.receipt_rounded},
   ];
 
+  String get tripId {
+    final args = Get.arguments;
+    if (args != null && args is Map && args.containsKey('tripId')) {
+      return args['tripId'] as String;
+    }
+    return '';
+  }
+
   @override
   void onInit() {
     super.onInit();
-    final currentU = _authService.currentUser.value;
-    if (currentU != null) {
-      selectedPaidByUserId.value = currentU.id;
-    }
     _initData();
   }
 
   Future<void> _initData() async {
-    final groupList = await _groupService.getGroups();
-    groups.assignAll(groupList);
-
-    final args = Get.arguments;
-    if (args != null && args is Map && args.containsKey('groupId')) {
-      final gId = args['groupId'] as String;
-      final match = groups.firstWhereOrNull((g) => g.id == gId);
-      if (match != null) {
-        onGroupSelected(match);
+    isLoading.value = true;
+    try {
+      final args = Get.arguments;
+      if (args != null && args is Map && args.containsKey('existingExpense')) {
+        existingExpense = args['existingExpense'] as TripExpenseModel;
       }
-    } else if (groups.isNotEmpty) {
-      onGroupSelected(groups.first);
-    } else {
-      onGroupSelected(null);
+
+      final peopleList = await _tripService.getTripPeople(tripId);
+      tripPeople.assignAll(peopleList);
+
+      if (existingExpense != null) {
+        descriptionController.text = existingExpense!.description;
+        amountController.text = existingExpense!.totalAmount.toStringAsFixed(2);
+        noteController.text = existingExpense!.note;
+        selectedCategory.value = existingExpense!.category;
+        selectedSplitType.value = existingExpense!.splitType;
+        expenseDate.value = existingExpense!.expenseDate;
+        selectedPaidByPersonId.value = existingExpense!.paidByPersonId;
+
+        final splitPersonIds =
+            existingExpense!.splits.map((s) => s.personId).toList();
+        selectedParticipantIds.assignAll(splitPersonIds);
+
+        for (var s in existingExpense!.splits) {
+          if (existingExpense!.splitType == SplitType.percentage &&
+              s.sharePercentage != null) {
+            customShareControllers[s.personId] = TextEditingController(
+                text: s.sharePercentage!.toStringAsFixed(2));
+          } else {
+            customShareControllers[s.personId] =
+                TextEditingController(text: s.shareAmount.toStringAsFixed(2));
+          }
+        }
+      } else {
+        selectedParticipantIds.assignAll(peopleList.map((p) => p.id));
+        if (peopleList.isNotEmpty) {
+          selectedPaidByPersonId.value = peopleList.first.id;
+        }
+      }
+
+      _rebuildCustomShareControllers();
+    } finally {
+      isLoading.value = false;
     }
   }
 
-  void onGroupSelected(GroupModel? group) async {
-    selectedGroup.value = group;
-    final currentU = _authService.currentUser.value;
-    if (currentU != null) {
-      selectedPaidByUserId.value = currentU.id;
-    }
-
-    if (group != null) {
-      final members = await _groupService.getGroupMembers(group.id);
-      availableParticipants.assignAll(members);
-      selectedParticipantIds.assignAll(members.map((m) => m.id));
-    } else if (currentU != null) {
-      final friends = await _friendService.getFriends();
-      availableParticipants.assignAll([currentU, ...friends]);
-      selectedParticipantIds.assignAll([currentU.id, if (friends.isNotEmpty) friends.first.id]);
-    }
-    _rebuildCustomShareControllers();
-  }
-
-  void toggleParticipant(String userId) {
-    if (selectedParticipantIds.contains(userId)) {
+  void toggleParticipant(String personId) {
+    if (selectedParticipantIds.contains(personId)) {
       if (selectedParticipantIds.length > 1) {
-        selectedParticipantIds.remove(userId);
+        selectedParticipantIds.remove(personId);
       }
     } else {
-      selectedParticipantIds.add(userId);
+      selectedParticipantIds.add(personId);
     }
     _rebuildCustomShareControllers();
   }
 
   void _rebuildCustomShareControllers() {
-    for (var userId in selectedParticipantIds) {
-      if (!customShareControllers.containsKey(userId)) {
-        customShareControllers[userId] = TextEditingController(text: '0');
+    for (var id in selectedParticipantIds) {
+      if (!customShareControllers.containsKey(id)) {
+        customShareControllers[id] = TextEditingController(text: '0');
       }
     }
   }
 
   double get totalAmount => double.tryParse(amountController.text) ?? 0.0;
 
-  Map<String, double> calculateSplitDetails() {
+  List<Map<String, dynamic>> calculateSplitsData() {
     final count = selectedParticipantIds.length;
-    if (count == 0 || totalAmount <= 0) return {};
+    if (count == 0 || totalAmount <= 0) return [];
 
-    Map<String, double> details = {};
+    List<Map<String, dynamic>> result = [];
 
     switch (selectedSplitType.value) {
       case SplitType.equal:
-        final perPerson = (totalAmount / count);
-        for (var id in selectedParticipantIds) {
-          details[id] = double.parse(perPerson.toStringAsFixed(2));
+        final baseShare = double.parse((totalAmount / count).toStringAsFixed(2));
+        double calculatedSum = baseShare * count;
+        double diff = double.parse((totalAmount - calculatedSum).toStringAsFixed(2));
+
+        for (int i = 0; i < count; i++) {
+          final id = selectedParticipantIds[i];
+          double share = baseShare;
+          if (i == 0) {
+            share = double.parse((share + diff).toStringAsFixed(2));
+          }
+          result.add({
+            'person_id': id,
+            'share_amount': share,
+            'share_percentage': null,
+          });
         }
         break;
 
       case SplitType.unequal:
         for (var id in selectedParticipantIds) {
-          final val = double.tryParse(customShareControllers[id]?.text ?? '0') ?? 0.0;
-          details[id] = val;
+          final val =
+              double.tryParse(customShareControllers[id]?.text ?? '0') ?? 0.0;
+          result.add({
+            'person_id': id,
+            'share_amount': double.parse(val.toStringAsFixed(2)),
+            'share_percentage': null,
+          });
         }
         break;
 
       case SplitType.percentage:
+        double totalPct = 0.0;
         for (var id in selectedParticipantIds) {
-          final pct = double.tryParse(customShareControllers[id]?.text ?? '0') ?? 0.0;
-          details[id] = double.parse(((totalAmount * pct) / 100).toStringAsFixed(2));
+          final pct =
+              double.tryParse(customShareControllers[id]?.text ?? '0') ?? 0.0;
+          totalPct += pct;
+        }
+
+        double calculatedSum = 0.0;
+        for (int i = 0; i < count; i++) {
+          final id = selectedParticipantIds[i];
+          final pct =
+              double.tryParse(customShareControllers[id]?.text ?? '0') ?? 0.0;
+          final rawShare =
+              double.parse(((totalAmount * pct) / 100).toStringAsFixed(2));
+          calculatedSum += rawShare;
+
+          result.add({
+            'person_id': id,
+            'share_amount': rawShare,
+            'share_percentage': pct,
+          });
+        }
+
+        // Adjust penny rounding if percentages sum to 100%
+        if ((totalPct - 100.0).abs() < 0.01 && count > 0) {
+          double diff = double.parse((totalAmount - calculatedSum).toStringAsFixed(2));
+          if (diff != 0) {
+            final firstShare = result[0]['share_amount'] as double;
+            result[0]['share_amount'] =
+                double.parse((firstShare + diff).toStringAsFixed(2));
+          }
         }
         break;
     }
 
-    return details;
-  }
-
-  Future<void> pickReceipt(ImageSource source) async {
-    final path = await _storageService.pickImage(source);
-    if (path != null) {
-      receiptImagePath.value = path;
-    }
+    return result;
   }
 
   Future<void> saveExpense() async {
     if (!formKey.currentState!.validate()) return;
 
     if (totalAmount <= 0) {
-      CustomToast.error('Please enter a valid amount');
+      CustomToast.error('Expense total amount must be greater than ₹0');
       return;
     }
 
-    final splitDetails = calculateSplitDetails();
+    if (selectedPaidByPersonId.value.isEmpty) {
+      CustomToast.error('Please select who paid for this expense');
+      return;
+    }
+
+    if (selectedParticipantIds.isEmpty) {
+      CustomToast.error('Please select at least one expense participant');
+      return;
+    }
+
+    final splits = calculateSplitsData();
+
+    // Validation per split mode
+    if (selectedSplitType.value == SplitType.unequal) {
+      double sumShares = 0.0;
+      for (var s in splits) {
+        sumShares += (s['share_amount'] as double);
+      }
+      sumShares = double.parse(sumShares.toStringAsFixed(2));
+
+      if ((sumShares - totalAmount).abs() > 0.01) {
+        CustomToast.error(
+            'Sum of shares (₹${sumShares.toStringAsFixed(2)}) must equal total amount (₹${totalAmount.toStringAsFixed(2)})');
+        return;
+      }
+    } else if (selectedSplitType.value == SplitType.percentage) {
+      double sumPct = 0.0;
+      for (var s in splits) {
+        sumPct += (s['share_percentage'] as double);
+      }
+      sumPct = double.parse(sumPct.toStringAsFixed(2));
+
+      if ((sumPct - 100.0).abs() > 0.01) {
+        CustomToast.error(
+            'Sum of percentages (${sumPct.toStringAsFixed(2)}%) must equal 100%');
+        return;
+      }
+    }
 
     isLoading.value = true;
     try {
-      final expense = ExpenseModel(
-        id: 'exp_${DateTime.now().millisecondsSinceEpoch}',
-        groupId: selectedGroup.value?.id,
-        description: descriptionController.text.trim(),
-        amount: totalAmount,
-        paidByUserId: selectedPaidByUserId.value,
-        splitType: selectedSplitType.value,
-        splitDetails: splitDetails,
-        category: selectedCategory.value,
-        receiptPath: receiptImagePath.value,
-        createdAt: DateTime.now(),
-        participantIds: selectedParticipantIds,
-      );
+      if (existingExpense == null) {
+        await _expenseService.createExpense(
+          tripId: tripId,
+          description: descriptionController.text.trim(),
+          totalAmount: totalAmount,
+          paidByPersonId: selectedPaidByPersonId.value,
+          category: selectedCategory.value,
+          splitType: selectedSplitType.value,
+          expenseDate: expenseDate.value,
+          note: noteController.text.trim(),
+          splitsData: splits,
+        );
+      } else {
+        await _expenseService.updateExpense(
+          existingExpense!.id,
+          description: descriptionController.text.trim(),
+          totalAmount: totalAmount,
+          paidByPersonId: selectedPaidByPersonId.value,
+          category: selectedCategory.value,
+          splitType: selectedSplitType.value,
+          expenseDate: expenseDate.value,
+          note: noteController.text.trim(),
+          splitsData: splits,
+        );
+      }
 
-      await _expenseService.addExpense(expense);
-      CustomToast.success('Expense added successfully!');
-      Get.back();
+      // Close screen route first
+      Get.back(result: true);
+
+      // Show success toast
+      CustomToast.success(
+        existingExpense == null
+            ? 'Expense recorded successfully!'
+            : 'Expense updated successfully!',
+      );
     } catch (e) {
-      CustomToast.error('Failed to add expense');
+      CustomToast.error('Failed to save expense');
     } finally {
       isLoading.value = false;
     }
@@ -194,6 +293,7 @@ class AddExpenseController extends GetxController {
   void onClose() {
     descriptionController.dispose();
     amountController.dispose();
+    noteController.dispose();
     for (var c in customShareControllers.values) {
       c.dispose();
     }

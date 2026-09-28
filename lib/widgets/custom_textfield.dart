@@ -36,6 +36,7 @@ class CustomTextField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isDesktop = MediaQuery.of(context).size.width >= 600;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -45,7 +46,7 @@ class CustomTextField extends StatelessWidget {
             label!,
             style: AppTextStyles.label(isDark: isDark),
           ),
-          SizedBox(height: 6.h),
+          SizedBox(height: isDesktop ? 6.0 : 6.h),
         ],
         TextFormField(
           controller: controller,

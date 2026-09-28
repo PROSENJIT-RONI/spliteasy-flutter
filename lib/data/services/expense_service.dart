@@ -1,24 +1,20 @@
-import 'dart:io';
+import 'dart:async';
 import 'package:get/get.dart';
-import '../models/expense_model.dart';
+import '../models/trip_expense_model.dart';
 import 'supabase_service.dart';
-import 'storage_service.dart';
 
 class ExpenseService extends GetxService {
-  final RxList<ExpenseModel> expenses = <ExpenseModel>[].obs;
-  final StorageService _storageService = Get.find<StorageService>();
+  final RxList<TripExpenseModel> expenses = <TripExpenseModel>[].obs;
 
-  Future<List<ExpenseModel>> getExpenses() async {
-    final userId = supabase.auth.currentUser?.id;
-    if (userId == null) return [];
-
+  Future<List<TripExpenseModel>> getTripExpenses(String tripId) async {
     try {
       final res = await supabase
-          .from('expenses')
-          .select()
-          .order('created_at', ascending: false);
+          .from('trip_expenses')
+          .select('*, expense_splits(*)')
+          .eq('trip_id', tripId)
+          .order('expense_date', ascending: false);
 
-      final list = (res as List).map((e) => ExpenseModel.fromJson(e)).toList();
+      final list = (res as List).map((e) => TripExpenseModel.fromJson(e)).toList();
       expenses.assignAll(list);
       return list;
     } catch (e) {
@@ -26,74 +22,130 @@ class ExpenseService extends GetxService {
     }
   }
 
-  Future<List<ExpenseModel>> getExpensesForGroup(String groupId) async {
+  Future<TripExpenseModel?> getExpenseById(String expenseId) async {
     try {
       final res = await supabase
-          .from('expenses')
-          .select()
-          .eq('group_id', groupId)
-          .order('created_at', ascending: false);
+          .from('trip_expenses')
+          .select('*, expense_splits(*)')
+          .eq('id', expenseId)
+          .maybeSingle();
 
-      return (res as List).map((e) => ExpenseModel.fromJson(e)).toList();
+      if (res == null) return null;
+      return TripExpenseModel.fromJson(res);
     } catch (e) {
-      return expenses.where((e) => e.groupId == groupId).toList();
+      return expenses.firstWhereOrNull((e) => e.id == expenseId);
     }
   }
 
-  Future<ExpenseModel> addExpense(ExpenseModel expense) async {
-    final userId = supabase.auth.currentUser?.id;
-    if (userId == null) throw Exception('Not authenticated');
-
-    String? receiptUrl = expense.receiptPath;
-
-    if (expense.receiptPath != null &&
-        !expense.receiptPath!.startsWith('http') &&
-        File(expense.receiptPath!).existsSync()) {
-      final file = File(expense.receiptPath!);
-      final filename = '${DateTime.now().millisecondsSinceEpoch}_receipt.jpg';
-      final storagePath = '$userId/$filename';
-
-      final uploadedUrl = await _storageService.uploadImage(
-        file,
-        'receipts',
-        storagePath,
-      );
-      if (uploadedUrl != null) {
-        receiptUrl = uploadedUrl;
-      }
-    }
-
-    final insertData = {
-      'group_id': expense.groupId,
-      'description': expense.description,
-      'amount': expense.amount,
-      'paid_by': userId,
-      'paid_by_user_id': userId,
-      'split_type': expense.splitType.name,
-      'split_details': expense.splitDetails,
-      'category': expense.category,
-      'receipt_path': receiptUrl,
-      'participant_ids': expense.participantIds,
+  Future<TripExpenseModel> createExpense({
+    required String tripId,
+    required String description,
+    required double totalAmount,
+    required String paidByPersonId,
+    required String category,
+    required SplitType splitType,
+    required DateTime expenseDate,
+    String note = '',
+    required List<Map<String, dynamic>> splitsData, // person_id, share_amount, share_percentage
+  }) async {
+    final expenseInsert = {
+      'trip_id': tripId,
+      'description': description,
+      'total_amount': totalAmount,
+      'paid_by_person_id': paidByPersonId,
+      'category': category,
+      'split_type': splitType.name,
+      'expense_date': expenseDate.toIso8601String(),
+      'note': note,
     };
 
-    final res =
-        await supabase.from('expenses').insert(insertData).select().single();
+    final expRes =
+        await supabase.from('trip_expenses').insert(expenseInsert).select().single();
+    final expenseId = expRes['id'] as String;
 
-    final created = ExpenseModel.fromJson(res);
-    expenses.insert(0, created);
-    return created;
+    final splitsToInsert = splitsData.map((s) {
+      return {
+        'expense_id': expenseId,
+        'person_id': s['person_id'],
+        'share_amount': s['share_amount'],
+        if (s['share_percentage'] != null)
+          'share_percentage': s['share_percentage'],
+      };
+    }).toList();
+
+    final splitsRes =
+        await supabase.from('expense_splits').insert(splitsToInsert).select();
+
+    final fullExpense = TripExpenseModel.fromJson({
+      ...expRes,
+      'expense_splits': splitsRes,
+    });
+
+    expenses.insert(0, fullExpense);
+    return fullExpense;
   }
 
-  Future<void> deleteExpense(String id) async {
-    final userId = supabase.auth.currentUser?.id;
-    if (userId == null) return;
+  Future<TripExpenseModel> updateExpense(
+    String expenseId, {
+    required String description,
+    required double totalAmount,
+    required String paidByPersonId,
+    required String category,
+    required SplitType splitType,
+    required DateTime expenseDate,
+    String note = '',
+    required List<Map<String, dynamic>> splitsData,
+  }) async {
+    final expenseUpdate = {
+      'description': description,
+      'total_amount': totalAmount,
+      'paid_by_person_id': paidByPersonId,
+      'category': category,
+      'split_type': splitType.name,
+      'expense_date': expenseDate.toIso8601String(),
+      'note': note,
+      'updated_at': DateTime.now().toIso8601String(),
+    };
 
-    await supabase
-        .from('expenses')
-        .delete()
-        .eq('id', id)
-        .or('paid_by.eq.$userId,paid_by_user_id.eq.$userId');
+    final expRes = await supabase
+        .from('trip_expenses')
+        .update(expenseUpdate)
+        .eq('id', expenseId)
+        .select()
+        .single();
 
-    expenses.removeWhere((e) => e.id == id);
+    // Delete old splits
+    await supabase.from('expense_splits').delete().eq('expense_id', expenseId);
+
+    // Insert new splits
+    final splitsToInsert = splitsData.map((s) {
+      return {
+        'expense_id': expenseId,
+        'person_id': s['person_id'],
+        'share_amount': s['share_amount'],
+        if (s['share_percentage'] != null)
+          'share_percentage': s['share_percentage'],
+      };
+    }).toList();
+
+    final splitsRes =
+        await supabase.from('expense_splits').insert(splitsToInsert).select();
+
+    final updated = TripExpenseModel.fromJson({
+      ...expRes,
+      'expense_splits': splitsRes,
+    });
+
+    final index = expenses.indexWhere((e) => e.id == expenseId);
+    if (index != -1) {
+      expenses[index] = updated;
+    }
+    return updated;
+  }
+
+  Future<void> deleteExpense(String expenseId) async {
+    await supabase.from('expense_splits').delete().eq('expense_id', expenseId);
+    await supabase.from('trip_expenses').delete().eq('id', expenseId);
+    expenses.removeWhere((e) => e.id == expenseId);
   }
 }

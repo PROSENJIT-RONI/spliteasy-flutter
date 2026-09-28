@@ -1,11 +1,10 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
-import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_text_styles.dart';
-import '../../data/models/expense_model.dart';
+import '../../data/models/trip_expense_model.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_textfield.dart';
 import '../../widgets/responsive_layout.dart';
@@ -17,10 +16,11 @@ class AddExpenseScreen extends GetView<AddExpenseController> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isEditing = controller.existingExpense != null;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Add Expense'),
+        title: Text(isEditing ? 'Edit Expense' : 'Add Expense'),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -32,48 +32,10 @@ class AddExpenseScreen extends GetView<AddExpenseController> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Group Picker
-                  Text('Select Group / Context', style: AppTextStyles.label(isDark: isDark)),
-                  SizedBox(height: 6.h),
-                  Obx(
-                    () => Container(
-                      padding: EdgeInsets.symmetric(horizontal: 16.w),
-                      decoration: BoxDecoration(
-                        color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-                        borderRadius: BorderRadius.circular(12.r),
-                        border: Border.all(
-                          color: isDark ? AppColors.borderDark : AppColors.borderLight,
-                        ),
-                      ),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                          value: controller.selectedGroup.value?.id,
-                          hint: const Text('Non-group (Direct Split)'),
-                          isExpanded: true,
-                          dropdownColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-                          items: controller.groups.map((g) {
-                            return DropdownMenuItem<String>(
-                              value: g.id,
-                              child: Text(
-                                '${g.icon} ${g.name}',
-                                style: AppTextStyles.bodyMedium(isDark: isDark),
-                              ),
-                            );
-                          }).toList(),
-                          onChanged: (val) {
-                            final match = controller.groups.firstWhereOrNull((g) => g.id == val);
-                            controller.onGroupSelected(match);
-                          },
-                        ),
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 20.h),
-
                   // Description
                   CustomTextField(
-                    label: 'Description',
-                    hintText: 'e.g. Dinner, Taxi, Hotel',
+                    label: 'Expense Description *',
+                    hintText: 'e.g. Dinner, Taxi, Resort',
                     controller: controller.descriptionController,
                     prefixIcon: Icon(Icons.description_outlined, size: 20.sp),
                     validator: (value) {
@@ -85,23 +47,70 @@ class AddExpenseScreen extends GetView<AddExpenseController> {
                   ),
                   SizedBox(height: 16.h),
 
-                  // Amount Input
-                  CustomTextField(
-                    label: 'Amount (\$)',
-                    hintText: '0.00',
-                    controller: controller.amountController,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    prefixIcon: Icon(Icons.attach_money_rounded, size: 20.sp),
-                    onChanged: (_) => controller.update(),
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Please enter amount';
-                      }
-                      if (double.tryParse(value) == null) {
-                        return 'Please enter valid number';
-                      }
-                      return null;
-                    },
+                  // Amount & Date Row
+                  Row(
+                    children: [
+                      // Amount
+                      Expanded(
+                        child: CustomTextField(
+                          label: 'Total Amount (₹) *',
+                          hintText: '0.00',
+                          controller: controller.amountController,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          prefixIcon: Icon(Icons.currency_rupee_rounded, size: 20.sp),
+                          onChanged: (_) => controller.update(),
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return 'Please enter amount';
+                            }
+                            if (double.tryParse(value) == null) {
+                              return 'Enter valid number';
+                            }
+                            return null;
+                          },
+                        ),
+                      ),
+                      SizedBox(width: 12.w),
+
+                      // Date
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Date', style: AppTextStyles.label(isDark: isDark)),
+                            SizedBox(height: 6.h),
+                            Obx(
+                              () => InkWell(
+                                onTap: () => _selectDate(context),
+                                borderRadius: BorderRadius.circular(12.r),
+                                child: Container(
+                                  padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 14.h),
+                                  decoration: BoxDecoration(
+                                    color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+                                    borderRadius: BorderRadius.circular(12.r),
+                                    border: Border.all(
+                                      color: isDark ? AppColors.borderDark : AppColors.borderLight,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.calendar_today_rounded, size: 18.sp, color: AppColors.primary),
+                                      SizedBox(width: 8.w),
+                                      Expanded(
+                                        child: Text(
+                                          DateFormat('dd/MM/yyyy').format(controller.expenseDate.value),
+                                          style: AppTextStyles.bodyMedium(isDark: isDark),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                   SizedBox(height: 20.h),
 
@@ -147,8 +156,8 @@ class AddExpenseScreen extends GetView<AddExpenseController> {
                   ),
                   SizedBox(height: 20.h),
 
-                  // Paid By Selector
-                  Text('Paid By', style: AppTextStyles.label(isDark: isDark)),
+                  // Paid By Dropdown
+                  Text('Paid By *', style: AppTextStyles.label(isDark: isDark)),
                   SizedBox(height: 6.h),
                   Obx(
                     () => Container(
@@ -162,21 +171,24 @@ class AddExpenseScreen extends GetView<AddExpenseController> {
                       ),
                       child: DropdownButtonHideUnderline(
                         child: DropdownButton<String>(
-                          value: controller.selectedPaidByUserId.value,
+                          value: controller.selectedPaidByPersonId.value.isNotEmpty
+                              ? controller.selectedPaidByPersonId.value
+                              : null,
+                          hint: const Text('Select who paid'),
                           isExpanded: true,
                           dropdownColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-                          items: controller.availableParticipants.map((p) {
+                          items: controller.tripPeople.map((p) {
                             return DropdownMenuItem<String>(
                               value: p.id,
                               child: Text(
-                                p.id == 'user_me' ? 'You (${p.name})' : p.name,
+                                p.name,
                                 style: AppTextStyles.bodyMedium(isDark: isDark),
                               ),
                             );
                           }).toList(),
                           onChanged: (val) {
                             if (val != null) {
-                              controller.selectedPaidByUserId.value = val;
+                              controller.selectedPaidByPersonId.value = val;
                             }
                           },
                         ),
@@ -210,19 +222,27 @@ class AddExpenseScreen extends GetView<AddExpenseController> {
                       selected: {controller.selectedSplitType.value},
                       onSelectionChanged: (set) {
                         controller.selectedSplitType.value = set.first;
+                        controller.update();
                       },
                     ),
                   ),
                   SizedBox(height: 16.h),
 
-                  // Live Split Preview List
+                  // Participants List & Live Shares Preview
+                  Text('Expense Participants', style: AppTextStyles.label(isDark: isDark)),
+                  SizedBox(height: 8.h),
                   Obx(
                     () {
-                      final details = controller.calculateSplitDetails();
+                      final splitsData = controller.calculateSplitsData();
+                      final splitsMap = {
+                        for (var s in splitsData) s['person_id'] as String: s['share_amount'] as double
+                      };
+
                       return Column(
-                        children: controller.availableParticipants.map((p) {
-                          final isIncluded = controller.selectedParticipantIds.contains(p.id);
-                          final shareVal = details[p.id] ?? 0.0;
+                        children: controller.tripPeople.map((person) {
+                          final isIncluded =
+                              controller.selectedParticipantIds.contains(person.id);
+                          final shareVal = splitsMap[person.id] ?? 0.0;
 
                           return Card(
                             margin: EdgeInsets.only(bottom: 8.h),
@@ -233,20 +253,20 @@ class AddExpenseScreen extends GetView<AddExpenseController> {
                                   Checkbox(
                                     value: isIncluded,
                                     activeColor: AppColors.primary,
-                                    onChanged: (_) => controller.toggleParticipant(p.id),
+                                    onChanged: (_) => controller.toggleParticipant(person.id),
                                   ),
                                   Expanded(
                                     child: Text(
-                                      p.id == 'user_me' ? '${p.name} (You)' : p.name,
+                                      person.name,
                                       style: AppTextStyles.bodyMedium(isDark: isDark)
                                           .copyWith(fontWeight: FontWeight.w600),
                                     ),
                                   ),
 
-                                  // Split details widget depending on mode
+                                  // Shares UI per mode
                                   if (controller.selectedSplitType.value == SplitType.equal)
                                     Text(
-                                      isIncluded ? '\$${shareVal.toStringAsFixed(2)}' : '\$0.00',
+                                      isIncluded ? '₹${shareVal.toStringAsFixed(2)}' : '₹0.00',
                                       style: TextStyle(
                                         fontWeight: FontWeight.bold,
                                         fontSize: 16.sp,
@@ -255,12 +275,12 @@ class AddExpenseScreen extends GetView<AddExpenseController> {
                                     )
                                   else if (controller.selectedSplitType.value == SplitType.unequal)
                                     SizedBox(
-                                      width: 100.w,
+                                      width: 110.w,
                                       child: TextField(
-                                        controller: controller.customShareControllers[p.id],
+                                        controller: controller.customShareControllers[person.id],
                                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
                                         decoration: const InputDecoration(
-                                          prefixText: '\$',
+                                          prefixText: '₹',
                                           contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                                         ),
                                         onChanged: (_) => controller.update(),
@@ -273,7 +293,7 @@ class AddExpenseScreen extends GetView<AddExpenseController> {
                                         SizedBox(
                                           width: 70.w,
                                           child: TextField(
-                                            controller: controller.customShareControllers[p.id],
+                                            controller: controller.customShareControllers[person.id],
                                             keyboardType: const TextInputType.numberWithOptions(decimal: true),
                                             decoration: const InputDecoration(
                                               suffixText: '%',
@@ -284,7 +304,7 @@ class AddExpenseScreen extends GetView<AddExpenseController> {
                                         ),
                                         SizedBox(width: 8.w),
                                         Text(
-                                          '(\$${shareVal.toStringAsFixed(2)})',
+                                          '(₹${shareVal.toStringAsFixed(2)})',
                                           style: TextStyle(fontSize: 12.sp, color: AppColors.primary),
                                         ),
                                       ],
@@ -297,70 +317,21 @@ class AddExpenseScreen extends GetView<AddExpenseController> {
                       );
                     },
                   ),
-                  SizedBox(height: 20.h),
+                  SizedBox(height: 16.h),
 
-                  // Receipt Upload Section
-                  Text('Attach Receipt Photo', style: AppTextStyles.label(isDark: isDark)),
-                  SizedBox(height: 8.h),
-                  Obx(
-                    () {
-                      final path = controller.receiptImagePath.value;
-                      if (path != null && path.isNotEmpty) {
-                        return Stack(
-                          children: [
-                            Container(
-                              height: 160.h,
-                              width: double.infinity,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(12.r),
-                                image: DecorationImage(
-                                  image: FileImage(File(path)),
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                            ),
-                            Positioned(
-                              top: 8,
-                              right: 8,
-                              child: CircleAvatar(
-                                backgroundColor: Colors.black54,
-                                child: IconButton(
-                                  icon: const Icon(Icons.close, color: Colors.white),
-                                  onPressed: () => controller.receiptImagePath.value = null,
-                                ),
-                              ),
-                            ),
-                          ],
-                        );
-                      }
-
-                      return Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () => controller.pickReceipt(ImageSource.gallery),
-                              icon: const Icon(Icons.photo_library_outlined),
-                              label: const Text('Gallery'),
-                            ),
-                          ),
-                          SizedBox(width: 12.w),
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () => controller.pickReceipt(ImageSource.camera),
-                              icon: const Icon(Icons.camera_alt_outlined),
-                              label: const Text('Camera'),
-                            ),
-                          ),
-                        ],
-                      );
-                    },
+                  // Note Field
+                  CustomTextField(
+                    label: 'Note (Optional)',
+                    hintText: 'e.g. Paid via UPI',
+                    controller: controller.noteController,
+                    prefixIcon: Icon(Icons.note_alt_outlined, size: 20.sp),
                   ),
                   SizedBox(height: 32.h),
 
-                  // Submit Expense Button
+                  // Submit Button
                   Obx(
                     () => CustomButton(
-                      text: 'Save Expense',
+                      text: isEditing ? 'Update Expense' : 'Save Expense',
                       isLoading: controller.isLoading.value,
                       onPressed: controller.saveExpense,
                     ),
@@ -372,5 +343,18 @@ class AddExpenseScreen extends GetView<AddExpenseController> {
         ),
       ),
     );
+  }
+
+  Future<void> _selectDate(BuildContext context) async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: controller.expenseDate.value,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2035),
+    );
+
+    if (picked != null) {
+      controller.expenseDate.value = picked;
+    }
   }
 }

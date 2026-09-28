@@ -29,8 +29,11 @@ class CustomButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final effectiveHeight = height ?? 50.h;
+    final isDesktop = MediaQuery.of(context).size.width >= 600;
+    final effectiveHeight = height ?? (isDesktop ? 48.0 : 50.h);
     final effectiveWidth = width ?? double.infinity;
+    final radius = isDesktop ? 12.0 : 12.r;
+    final iconSize = isDesktop ? 20.0 : 20.sp;
 
     if (isOutlined) {
       return SizedBox(
@@ -44,11 +47,13 @@ class CustomButton extends StatelessWidget {
               width: 1.5,
             ),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12.r),
+              borderRadius: BorderRadius.circular(radius),
             ),
           ),
           child: _buildChild(
             color: textColor ?? backgroundColor ?? AppColors.primary,
+            isDesktop: isDesktop,
+            iconSize: iconSize,
           ),
         ),
       );
@@ -63,20 +68,29 @@ class CustomButton extends StatelessWidget {
           backgroundColor: backgroundColor ?? AppColors.primary,
           disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.5),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12.r),
+            borderRadius: BorderRadius.circular(radius),
           ),
           elevation: 0,
         ),
-        child: _buildChild(color: textColor ?? Colors.white),
+        child: _buildChild(
+          color: textColor ?? Colors.white,
+          isDesktop: isDesktop,
+          iconSize: iconSize,
+        ),
       ),
     );
   }
 
-  Widget _buildChild({required Color color}) {
+  Widget _buildChild({
+    required Color color,
+    required bool isDesktop,
+    required double iconSize,
+  }) {
     if (isLoading) {
+      final spinnerSize = isDesktop ? 22.0 : 24.w;
       return SizedBox(
-        width: 24.w,
-        height: 24.w,
+        width: spinnerSize,
+        height: spinnerSize,
         child: CircularProgressIndicator(
           strokeWidth: 2.5,
           valueColor: AlwaysStoppedAnimation<Color>(color),
@@ -88,8 +102,8 @@ class CustomButton extends StatelessWidget {
       return Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: color, size: 20.sp),
-          SizedBox(width: 8.w),
+          Icon(icon, color: color, size: iconSize),
+          SizedBox(width: isDesktop ? 8.0 : 8.w),
           Text(
             text,
             style: AppTextStyles.button(color: color),
