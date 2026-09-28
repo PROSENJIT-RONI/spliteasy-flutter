@@ -41,68 +41,78 @@ class HomeScreen extends GetView<HomeController> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Overview Metric Cards Row
+                      // Overview Metric Cards Row (Equal Height)
                       LayoutBuilder(
                         builder: (context, constraints) {
                           if (constraints.maxWidth >= 600) {
-                            return Row(
+                            return IntrinsicHeight(
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Expanded(
+                                    child: _buildMetricCard(
+                                      context: context,
+                                      title: 'Total Trips',
+                                      value: '${controller.totalTripsCount.value}',
+                                      subtitle: 'Active trips',
+                                      icon: Icons.flight_takeoff_rounded,
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: _buildMetricCard(
+                                      context: context,
+                                      title: 'Total Expenses',
+                                      value: '${controller.totalExpensesCount.value} items',
+                                      subtitle: 'Recorded expenses',
+                                      icon: Icons.receipt_long_rounded,
+                                      color: AppColors.secondary,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: _buildMetricCard(
+                                      context: context,
+                                      title: 'Total Amount',
+                                      value: '₹${controller.totalAmountAcrossTrips.value.toStringAsFixed(2)}',
+                                      subtitle: 'Cumulative total',
+                                      icon: Icons.account_balance_wallet_rounded,
+                                      color: AppColors.owed,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+
+                          return IntrinsicHeight(
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
                                 Expanded(
                                   child: _buildMetricCard(
                                     context: context,
                                     title: 'Total Trips',
                                     value: '${controller.totalTripsCount.value}',
+                                    subtitle: 'Active trips',
                                     icon: Icons.flight_takeoff_rounded,
                                     color: AppColors.primary,
                                   ),
                                 ),
-                                const SizedBox(width: 12),
+                                SizedBox(width: 12.w),
                                 Expanded(
                                   child: _buildMetricCard(
                                     context: context,
                                     title: 'Total Expenses',
-                                    value: '${controller.totalExpensesCount.value} items',
-                                    icon: Icons.receipt_long_rounded,
+                                    value: '₹${controller.totalAmountAcrossTrips.value.toStringAsFixed(2)}',
+                                    subtitle: '${controller.totalExpensesCount.value} items',
+                                    icon: Icons.account_balance_wallet_rounded,
                                     color: AppColors.secondary,
                                   ),
                                 ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: _buildMetricCard(
-                                    context: context,
-                                    title: 'Total Amount',
-                                    value: '₹${controller.totalAmountAcrossTrips.value.toStringAsFixed(2)}',
-                                    icon: Icons.account_balance_wallet_rounded,
-                                    color: AppColors.owed,
-                                  ),
-                                ),
                               ],
-                            );
-                          }
-
-                          return Row(
-                            children: [
-                              Expanded(
-                                child: _buildMetricCard(
-                                  context: context,
-                                  title: 'Total Trips',
-                                  value: '${controller.totalTripsCount.value}',
-                                  icon: Icons.flight_takeoff_rounded,
-                                  color: AppColors.primary,
-                                ),
-                              ),
-                              SizedBox(width: 12.w),
-                              Expanded(
-                                child: _buildMetricCard(
-                                  context: context,
-                                  title: 'Total Expenses',
-                                  value: '₹${controller.totalAmountAcrossTrips.value.toStringAsFixed(2)}',
-                                  subtitle: '${controller.totalExpensesCount.value} items',
-                                  icon: Icons.account_balance_wallet_rounded,
-                                  color: AppColors.secondary,
-                                ),
-                              ),
-                            ],
+                            ),
                           );
                         },
                       ),
@@ -343,6 +353,7 @@ class HomeScreen extends GetView<HomeController> {
         padding: EdgeInsets.all(isDesktop ? 16.0 : 16.r),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Row(
               children: [
@@ -377,15 +388,13 @@ class HomeScreen extends GetView<HomeController> {
                 ),
               ),
             ),
-            if (subtitle != null) ...[
-              const SizedBox(height: 2),
-              Text(
-                subtitle,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.bodySmall(isDark: isDark),
-              ),
-            ],
+            const SizedBox(height: 2),
+            Text(
+              subtitle ?? '',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.bodySmall(isDark: isDark),
+            ),
           ],
         ),
       ),
