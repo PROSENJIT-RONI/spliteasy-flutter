@@ -34,52 +34,106 @@ class HomeScreen extends GetView<HomeController> {
               onRefresh: controller.loadDashboardData,
               color: AppColors.primary,
               child: SingleChildScrollView(
-                padding: EdgeInsets.all(isDesktop ? 20.0 : 12.r),
+                padding: EdgeInsets.all(isDesktop ? 20.0 : 16.r),
                 physics: const AlwaysScrollableScrollPhysics(),
                 child: CenteredContentWrapper(
                   maxWidth: 950,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Overview 3 Metric Cards Row (Equal Height on both Phone and Laptop)
-                      IntrinsicHeight(
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Expanded(
-                              child: _buildMetricCard(
-                                context: context,
-                                title: 'Total Trips',
-                                value: '${controller.totalTripsCount.value}',
-                                subtitle: 'Active trips',
-                                icon: Icons.flight_takeoff_rounded,
-                                color: AppColors.primary,
+                      // Overview Metric Cards (Horizontal Scroll on Mobile, Row on Laptop)
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          if (constraints.maxWidth >= 600) {
+                            return IntrinsicHeight(
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Expanded(
+                                    child: _buildMetricCard(
+                                      context: context,
+                                      title: 'Total Trips',
+                                      value: '${controller.totalTripsCount.value}',
+                                      subtitle: 'Active trips',
+                                      icon: Icons.flight_takeoff_rounded,
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: _buildMetricCard(
+                                      context: context,
+                                      title: 'Total Expenses',
+                                      value: '${controller.totalExpensesCount.value} items',
+                                      subtitle: 'Recorded expenses',
+                                      icon: Icons.receipt_long_rounded,
+                                      color: AppColors.secondary,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: _buildMetricCard(
+                                      context: context,
+                                      title: 'Total Amount',
+                                      value: '₹${controller.totalAmountAcrossTrips.value.toStringAsFixed(2)}',
+                                      subtitle: 'Cumulative total',
+                                      icon: Icons.account_balance_wallet_rounded,
+                                      color: AppColors.owed,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+
+                          // Mobile View: Horizontal Scrollable List with uncompressed Card dimensions!
+                          return SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            physics: const BouncingScrollPhysics(),
+                            child: IntrinsicHeight(
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  SizedBox(
+                                    width: 155.w,
+                                    child: _buildMetricCard(
+                                      context: context,
+                                      title: 'Total Trips',
+                                      value: '${controller.totalTripsCount.value}',
+                                      subtitle: 'Active trips',
+                                      icon: Icons.flight_takeoff_rounded,
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
+                                  SizedBox(width: 10.w),
+                                  SizedBox(
+                                    width: 155.w,
+                                    child: _buildMetricCard(
+                                      context: context,
+                                      title: 'Total Expenses',
+                                      value: '${controller.totalExpensesCount.value} items',
+                                      subtitle: 'Recorded items',
+                                      icon: Icons.receipt_long_rounded,
+                                      color: AppColors.secondary,
+                                    ),
+                                  ),
+                                  SizedBox(width: 10.w),
+                                  SizedBox(
+                                    width: 155.w,
+                                    child: _buildMetricCard(
+                                      context: context,
+                                      title: 'Total Amount',
+                                      value: '₹${controller.totalAmountAcrossTrips.value.toStringAsFixed(2)}',
+                                      subtitle: 'Cumulative total',
+                                      icon: Icons.account_balance_wallet_rounded,
+                                      color: AppColors.owed,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            SizedBox(width: isDesktop ? 12.0 : 6.w),
-                            Expanded(
-                              child: _buildMetricCard(
-                                context: context,
-                                title: 'Expenses',
-                                value: '${controller.totalExpensesCount.value}',
-                                subtitle: 'Items count',
-                                icon: Icons.receipt_long_rounded,
-                                color: AppColors.secondary,
-                              ),
-                            ),
-                            SizedBox(width: isDesktop ? 12.0 : 6.w),
-                            Expanded(
-                              child: _buildMetricCard(
-                                context: context,
-                                title: 'Total Amount',
-                                value: '₹${controller.totalAmountAcrossTrips.value.toStringAsFixed(2)}',
-                                subtitle: 'Cumulative',
-                                icon: Icons.account_balance_wallet_rounded,
-                                color: AppColors.owed,
-                              ),
-                            ),
-                          ],
-                        ),
+                          );
+                        },
                       ),
                       SizedBox(height: isDesktop ? 20.0 : 20.h),
 
@@ -315,7 +369,7 @@ class HomeScreen extends GetView<HomeController> {
 
     return Card(
       child: Padding(
-        padding: EdgeInsets.all(isDesktop ? 16.0 : 10.r),
+        padding: EdgeInsets.all(isDesktop ? 16.0 : 12.r),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -328,22 +382,22 @@ class HomeScreen extends GetView<HomeController> {
                     color: color.withValues(alpha: 0.12),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(icon, color: color, size: isDesktop ? 18.0 : 16.sp),
+                  child: Icon(icon, color: color, size: isDesktop ? 18.0 : 18.sp),
                 ),
-                SizedBox(width: isDesktop ? 8.0 : 4.w),
+                SizedBox(width: isDesktop ? 8.0 : 6.w),
                 Expanded(
                   child: Text(
                     title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: AppTextStyles.label(isDark: isDark).copyWith(
-                      fontSize: isDesktop ? 13.0 : 11.sp,
+                      fontSize: isDesktop ? 13.0 : 12.sp,
                     ),
                   ),
                 ),
               ],
             ),
-            SizedBox(height: isDesktop ? 10.0 : 8.h),
+            SizedBox(height: isDesktop ? 10.0 : 10.h),
             FittedBox(
               fit: BoxFit.scaleDown,
               alignment: Alignment.centerLeft,
@@ -352,7 +406,7 @@ class HomeScreen extends GetView<HomeController> {
                 style: AppTextStyles.h2(isDark: isDark).copyWith(
                   color: color,
                   fontWeight: FontWeight.bold,
-                  fontSize: isDesktop ? 22.0 : 16.sp,
+                  fontSize: isDesktop ? 22.0 : 18.sp,
                 ),
               ),
             ),
@@ -362,7 +416,7 @@ class HomeScreen extends GetView<HomeController> {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: AppTextStyles.bodySmall(isDark: isDark).copyWith(
-                fontSize: isDesktop ? 12.0 : 10.sp,
+                fontSize: isDesktop ? 12.0 : 11.sp,
               ),
             ),
           ],
