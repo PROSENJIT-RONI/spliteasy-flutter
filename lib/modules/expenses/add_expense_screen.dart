@@ -17,6 +17,10 @@ class AddExpenseScreen extends GetView<AddExpenseController> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isEditing = controller.existingExpense != null;
+    final isDesktop = MediaQuery.of(context).size.width >= 600;
+
+    final iconSize = isDesktop ? 20.0 : 20.sp;
+    final calendarIconSize = isDesktop ? 18.0 : 18.sp;
 
     return Scaffold(
       appBar: AppBar(
@@ -24,7 +28,7 @@ class AddExpenseScreen extends GetView<AddExpenseController> {
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: EdgeInsets.all(20.r),
+          padding: EdgeInsets.all(isDesktop ? 24.0 : 20.r),
           child: CenteredContentWrapper(
             maxWidth: 600,
             child: Form(
@@ -37,7 +41,7 @@ class AddExpenseScreen extends GetView<AddExpenseController> {
                     label: 'Expense Description *',
                     hintText: 'e.g. Dinner, Taxi, Resort',
                     controller: controller.descriptionController,
-                    prefixIcon: Icon(Icons.description_outlined, size: 20.sp),
+                    prefixIcon: Icon(Icons.description_outlined, size: iconSize),
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
                         return 'Please enter description';
@@ -45,7 +49,7 @@ class AddExpenseScreen extends GetView<AddExpenseController> {
                       return null;
                     },
                   ),
-                  SizedBox(height: 16.h),
+                  SizedBox(height: isDesktop ? 16.0 : 16.h),
 
                   // Amount & Date Row
                   Row(
@@ -57,7 +61,7 @@ class AddExpenseScreen extends GetView<AddExpenseController> {
                           hintText: '0.00',
                           controller: controller.amountController,
                           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                          prefixIcon: Icon(Icons.currency_rupee_rounded, size: 20.sp),
+                          prefixIcon: Icon(Icons.currency_rupee_rounded, size: iconSize),
                           onChanged: (_) => controller.update(),
                           validator: (value) {
                             if (value == null || value.trim().isEmpty) {
@@ -70,32 +74,34 @@ class AddExpenseScreen extends GetView<AddExpenseController> {
                           },
                         ),
                       ),
-                      SizedBox(width: 12.w),
-
+                      SizedBox(width: isDesktop ? 12.0 : 12.w),
                       // Date
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text('Date', style: AppTextStyles.label(isDark: isDark)),
-                            SizedBox(height: 6.h),
+                            SizedBox(height: isDesktop ? 6.0 : 6.h),
                             Obx(
                               () => InkWell(
                                 onTap: () => _selectDate(context),
-                                borderRadius: BorderRadius.circular(12.r),
+                                borderRadius: BorderRadius.circular(12),
                                 child: Container(
-                                  padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 14.h),
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: isDesktop ? 12.0 : 12.w,
+                                    vertical: isDesktop ? 14.0 : 14.h,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-                                    borderRadius: BorderRadius.circular(12.r),
+                                    borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
                                       color: isDark ? AppColors.borderDark : AppColors.borderLight,
                                     ),
                                   ),
                                   child: Row(
                                     children: [
-                                      Icon(Icons.calendar_today_rounded, size: 18.sp, color: AppColors.primary),
-                                      SizedBox(width: 8.w),
+                                      Icon(Icons.calendar_today_rounded, size: calendarIconSize, color: AppColors.primary),
+                                      const SizedBox(width: 8),
                                       Expanded(
                                         child: Text(
                                           DateFormat('dd/MM/yyyy').format(controller.expenseDate.value),
@@ -112,17 +118,17 @@ class AddExpenseScreen extends GetView<AddExpenseController> {
                       ),
                     ],
                   ),
-                  SizedBox(height: 20.h),
+                  SizedBox(height: isDesktop ? 20.0 : 20.h),
 
                   // Category Selector
                   Text('Category', style: AppTextStyles.label(isDark: isDark)),
-                  SizedBox(height: 8.h),
+                  SizedBox(height: isDesktop ? 8.0 : 8.h),
                   SizedBox(
-                    height: 48.h,
+                    height: isDesktop ? 42.0 : 48.h,
                     child: ListView.separated(
                       scrollDirection: Axis.horizontal,
                       itemCount: controller.categories.length,
-                      separatorBuilder: (context, index) => SizedBox(width: 8.w),
+                      separatorBuilder: (context, index) => SizedBox(width: isDesktop ? 8.0 : 8.w),
                       itemBuilder: (context, index) {
                         final cat = controller.categories[index];
                         return Obx(() {
@@ -130,7 +136,7 @@ class AddExpenseScreen extends GetView<AddExpenseController> {
                           return ChoiceChip(
                             avatar: Icon(
                               cat['icon'] as IconData,
-                              size: 18.sp,
+                              size: isDesktop ? 18.0 : 18.sp,
                               color: isSelected ? Colors.white : AppColors.primary,
                             ),
                             label: Text(cat['name'] as String),
@@ -154,17 +160,17 @@ class AddExpenseScreen extends GetView<AddExpenseController> {
                       },
                     ),
                   ),
-                  SizedBox(height: 20.h),
+                  SizedBox(height: isDesktop ? 20.0 : 20.h),
 
                   // Paid By Dropdown
                   Text('Paid By *', style: AppTextStyles.label(isDark: isDark)),
-                  SizedBox(height: 6.h),
+                  SizedBox(height: isDesktop ? 6.0 : 6.h),
                   Obx(
                     () => Container(
-                      padding: EdgeInsets.symmetric(horizontal: 16.w),
+                      padding: EdgeInsets.symmetric(horizontal: isDesktop ? 16.0 : 16.w),
                       decoration: BoxDecoration(
                         color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-                        borderRadius: BorderRadius.circular(12.r),
+                        borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color: isDark ? AppColors.borderDark : AppColors.borderLight,
                         ),
@@ -195,11 +201,11 @@ class AddExpenseScreen extends GetView<AddExpenseController> {
                       ),
                     ),
                   ),
-                  SizedBox(height: 24.h),
+                  SizedBox(height: isDesktop ? 24.0 : 24.h),
 
                   // Split Options Section
                   Text('Split Mode', style: AppTextStyles.h3(isDark: isDark)),
-                  SizedBox(height: 10.h),
+                  SizedBox(height: isDesktop ? 10.0 : 10.h),
                   Obx(
                     () => SegmentedButton<SplitType>(
                       segments: const [
@@ -226,11 +232,11 @@ class AddExpenseScreen extends GetView<AddExpenseController> {
                       },
                     ),
                   ),
-                  SizedBox(height: 16.h),
+                  SizedBox(height: isDesktop ? 16.0 : 16.h),
 
                   // Participants List & Live Shares Preview
                   Text('Expense Participants', style: AppTextStyles.label(isDark: isDark)),
-                  SizedBox(height: 8.h),
+                  SizedBox(height: isDesktop ? 8.0 : 8.h),
                   Obx(
                     () {
                       final splitsData = controller.calculateSplitsData();
@@ -245,9 +251,12 @@ class AddExpenseScreen extends GetView<AddExpenseController> {
                           final shareVal = splitsMap[person.id] ?? 0.0;
 
                           return Card(
-                            margin: EdgeInsets.only(bottom: 8.h),
+                            margin: EdgeInsets.only(bottom: isDesktop ? 8.0 : 8.h),
                             child: Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+                              padding: EdgeInsets.symmetric(
+                                horizontal: isDesktop ? 12.0 : 12.w,
+                                vertical: isDesktop ? 8.0 : 8.h,
+                              ),
                               child: Row(
                                 children: [
                                   Checkbox(
@@ -269,13 +278,13 @@ class AddExpenseScreen extends GetView<AddExpenseController> {
                                       isIncluded ? '₹${shareVal.toStringAsFixed(2)}' : '₹0.00',
                                       style: TextStyle(
                                         fontWeight: FontWeight.bold,
-                                        fontSize: 16.sp,
+                                        fontSize: isDesktop ? 16.0 : 16.sp,
                                         color: isIncluded ? AppColors.primary : Colors.grey,
                                       ),
                                     )
                                   else if (controller.selectedSplitType.value == SplitType.unequal)
                                     SizedBox(
-                                      width: 110.w,
+                                      width: isDesktop ? 100.0 : 110.w,
                                       child: TextField(
                                         controller: controller.customShareControllers[person.id],
                                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -291,7 +300,7 @@ class AddExpenseScreen extends GetView<AddExpenseController> {
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         SizedBox(
-                                          width: 70.w,
+                                          width: isDesktop ? 70.0 : 70.w,
                                           child: TextField(
                                             controller: controller.customShareControllers[person.id],
                                             keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -302,10 +311,13 @@ class AddExpenseScreen extends GetView<AddExpenseController> {
                                             onChanged: (_) => controller.update(),
                                           ),
                                         ),
-                                        SizedBox(width: 8.w),
+                                        SizedBox(width: isDesktop ? 8.0 : 8.w),
                                         Text(
                                           '(₹${shareVal.toStringAsFixed(2)})',
-                                          style: TextStyle(fontSize: 12.sp, color: AppColors.primary),
+                                          style: TextStyle(
+                                            fontSize: isDesktop ? 12.0 : 12.sp,
+                                            color: AppColors.primary,
+                                          ),
                                         ),
                                       ],
                                     ),
@@ -317,16 +329,16 @@ class AddExpenseScreen extends GetView<AddExpenseController> {
                       );
                     },
                   ),
-                  SizedBox(height: 16.h),
+                  SizedBox(height: isDesktop ? 16.0 : 16.h),
 
                   // Note Field
                   CustomTextField(
                     label: 'Note (Optional)',
                     hintText: 'e.g. Paid via UPI',
                     controller: controller.noteController,
-                    prefixIcon: Icon(Icons.note_alt_outlined, size: 20.sp),
+                    prefixIcon: Icon(Icons.note_alt_outlined, size: iconSize),
                   ),
-                  SizedBox(height: 32.h),
+                  SizedBox(height: isDesktop ? 32.0 : 32.h),
 
                   // Submit Button
                   Obx(
