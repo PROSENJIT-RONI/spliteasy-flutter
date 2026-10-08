@@ -6,7 +6,8 @@ import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_text_styles.dart';
 import '../../widgets/responsive_layout.dart';
 import '../../widgets/loading_indicator.dart';
-import '../home/home_controller.dart';
+import '../home/home_controller.dart'; // To get TripSummaryItem
+import '../main_navigation/main_navigation_controller.dart';
 import 'trips_controller.dart';
 
 class TripsScreen extends GetView<TripsController> {
@@ -19,6 +20,16 @@ class TripsScreen extends GetView<TripsController> {
 
     return Scaffold(
       appBar: AppBar(
+        leading: isDesktop
+            ? null
+            : IconButton(
+                icon: const Icon(Icons.arrow_back_rounded),
+                onPressed: () {
+                  if (Get.isRegistered<MainNavigationController>()) {
+                    Get.find<MainNavigationController>().changePage(0);
+                  }
+                },
+              ),
         title: const Text('All Trips'),
         actions: [
           IconButton(

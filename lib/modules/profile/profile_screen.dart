@@ -5,6 +5,7 @@ import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_text_styles.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/responsive_layout.dart';
+import '../main_navigation/main_navigation_controller.dart';
 import 'profile_controller.dart';
 
 class ProfileScreen extends GetView<ProfileController> {
@@ -20,6 +21,16 @@ class ProfileScreen extends GetView<ProfileController> {
 
     return Scaffold(
       appBar: AppBar(
+        leading: isDesktop
+            ? null
+            : IconButton(
+                icon: const Icon(Icons.arrow_back_rounded),
+                onPressed: () {
+                  if (Get.isRegistered<MainNavigationController>()) {
+                    Get.find<MainNavigationController>().changePage(0);
+                  }
+                },
+              ),
         title: const Text('Admin Profile'),
       ),
       body: SafeArea(

@@ -26,6 +26,14 @@ class MainNavigationScreen extends GetView<MainNavigationController> {
       canPop: false,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
+
+        // If user is NOT on Home Tab (index 0), go back to Home Tab instead of exiting
+        if (controller.currentIndex.value != 0) {
+          controller.changePage(0);
+          return;
+        }
+
+        // If user is already on Home Tab, show Exit App confirmation
         final shouldExit = await _showExitDialog(context);
         if (shouldExit == true) {
           SystemNavigator.pop();
