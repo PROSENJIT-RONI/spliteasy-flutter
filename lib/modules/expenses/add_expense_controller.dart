@@ -22,6 +22,8 @@ class AddExpenseController extends GetxController {
   final Rx<SplitType> selectedSplitType = SplitType.equal.obs;
   final RxString selectedCategory = 'Food'.obs;
   final Rx<DateTime> expenseDate = DateTime.now().obs;
+  
+  final RxBool isSelfPaidMode = false.obs;
 
   final RxMap<String, TextEditingController> customShareControllers =
       <String, TextEditingController>{}.obs;
@@ -183,7 +185,6 @@ class AddExpenseController extends GetxController {
           });
         }
 
-        // Adjust penny rounding if percentages sum to 100%
         if ((totalPct - 100.0).abs() < 0.01 && count > 0) {
           double diff = double.parse((totalAmount - calculatedSum).toStringAsFixed(2));
           if (diff != 0) {
@@ -202,23 +203,51 @@ class AddExpenseController extends GetxController {
     if (!formKey.currentState!.validate()) return;
 
     if (totalAmount <= 0) {
-      CustomToast.error('Expense total amount must be greater than ₹0');
+      CustomToast.error('Amount must be greater than ₹0');
       return;
     }
 
+    if (selectedParticipantIds.isEmpty) {
+      CustomToast.error('Please select at least one participant');
+      return;
+    }
+    
+    // BATCH MODE: Everyone paid for themselves
+    if (isSelfPaidMode.value && existingExpense == null) {
+      isLoading.value = true;
+      try {
+        for (var pId in selectedParticipantIds) {
+          await _expenseService.createExpense(
+            tripId: tripId,
+            description: descriptionController.text.trim(),
+            totalAmount: totalAmount,
+            paidByPersonId: pId,
+            category: selectedCategory.value,
+            splitType: SplitType.equal, // Inherently 100% to self
+            expenseDate: expenseDate.value,
+            note: noteController.text.trim(),
+            splitsData: [{'person_id': pId, 'share_amount': totalAmount}],
+          );
+        }
+        
+        Get.back(result: true);
+        CustomToast.success('Individual expenses recorded successfully!');
+      } catch (e) {
+        CustomToast.error('Failed to save individual expenses');
+      } finally {
+        isLoading.value = false;
+      }
+      return;
+    }
+
+    // NORMAL MODE
     if (selectedPaidByPersonId.value.isEmpty) {
       CustomToast.error('Please select who paid for this expense');
       return;
     }
 
-    if (selectedParticipantIds.isEmpty) {
-      CustomToast.error('Please select at least one expense participant');
-      return;
-    }
-
     final splits = calculateSplitsData();
 
-    // Validation per split mode
     if (selectedSplitType.value == SplitType.unequal) {
       double sumShares = 0.0;
       for (var s in splits) {
@@ -273,10 +302,7 @@ class AddExpenseController extends GetxController {
         );
       }
 
-      // Close screen route first
       Get.back(result: true);
-
-      // Show success toast
       CustomToast.success(
         existingExpense == null
             ? 'Expense recorded successfully!'

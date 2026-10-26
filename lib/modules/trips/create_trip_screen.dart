@@ -58,7 +58,6 @@ class CreateTripScreen extends GetView<CreateTripController> {
                     prefixIcon: Icon(Icons.location_on_outlined, size: iconSize),
                   ),
                   SizedBox(height: isDesktop ? 16.0 : 16.h),
-
                   // Date Pickers Row
                   Row(
                     children: [

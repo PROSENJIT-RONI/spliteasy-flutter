@@ -36,10 +36,40 @@ class AddExpenseScreen extends GetView<AddExpenseController> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  // Mode Toggle: Batch vs Shared
+                  if (!isEditing)
+                    Card(
+                      elevation: 0,
+                      color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide(color: isDark ? AppColors.borderDark : AppColors.borderLight),
+                      ),
+                      margin: EdgeInsets.only(bottom: isDesktop ? 20.0 : 20.h),
+                      child: Obx(
+                        () => SwitchListTile(
+                          title: Text(
+                            'Batch Individual Expenses',
+                            style: AppTextStyles.bodyLarge(isDark: isDark).copyWith(fontWeight: FontWeight.bold),
+                          ),
+                          subtitle: Text(
+                            'Everyone paid for themselves (e.g. Flight Tickets)',
+                            style: AppTextStyles.bodySmall(isDark: isDark),
+                          ),
+                          activeTrackColor: AppColors.primary,
+                          value: controller.isSelfPaidMode.value,
+                          onChanged: (val) {
+                            controller.isSelfPaidMode.value = val;
+                            controller.update();
+                          },
+                        ),
+                      ),
+                    ),
+
                   // Description
                   CustomTextField(
                     label: 'Expense Description *',
-                    hintText: 'e.g. Dinner, Taxi, Resort',
+                    hintText: 'e.g. Flight Ticket, Dinner',
                     controller: controller.descriptionController,
                     prefixIcon: Icon(Icons.description_outlined, size: iconSize),
                     validator: (value) {
@@ -56,22 +86,24 @@ class AddExpenseScreen extends GetView<AddExpenseController> {
                     children: [
                       // Amount
                       Expanded(
-                        child: CustomTextField(
-                          label: 'Total Amount (₹) *',
-                          hintText: '0.00',
-                          controller: controller.amountController,
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                          prefixIcon: Icon(Icons.currency_rupee_rounded, size: iconSize),
-                          onChanged: (_) => controller.update(),
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Please enter amount';
-                            }
-                            if (double.tryParse(value) == null) {
-                              return 'Enter valid number';
-                            }
-                            return null;
-                          },
+                        child: Obx(
+                          () => CustomTextField(
+                            label: controller.isSelfPaidMode.value ? 'Per Person Amount (₹) *' : 'Total Amount (₹) *',
+                            hintText: '0.00',
+                            controller: controller.amountController,
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            prefixIcon: Icon(Icons.currency_rupee_rounded, size: iconSize),
+                            onChanged: (_) => controller.update(),
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Please enter amount';
+                              }
+                              if (double.tryParse(value) == null) {
+                                return 'Enter valid number';
+                              }
+                              return null;
+                            },
+                          ),
                         ),
                       ),
                       SizedBox(width: isDesktop ? 12.0 : 12.w),
@@ -162,87 +194,93 @@ class AddExpenseScreen extends GetView<AddExpenseController> {
                   ),
                   SizedBox(height: isDesktop ? 20.0 : 20.h),
 
-                  // Paid By Dropdown
-                  Text('Paid By *', style: AppTextStyles.label(isDark: isDark)),
-                  SizedBox(height: isDesktop ? 6.0 : 6.h),
-                  Obx(
-                    () => Container(
-                      padding: EdgeInsets.symmetric(horizontal: isDesktop ? 16.0 : 16.w),
-                      decoration: BoxDecoration(
-                        color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: isDark ? AppColors.borderDark : AppColors.borderLight,
+                  Obx(() {
+                    if (controller.isSelfPaidMode.value) return const SizedBox.shrink();
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Paid By Dropdown
+                        Text('Paid By *', style: AppTextStyles.label(isDark: isDark)),
+                        SizedBox(height: isDesktop ? 6.0 : 6.h),
+                        Container(
+                          padding: EdgeInsets.symmetric(horizontal: isDesktop ? 16.0 : 16.w),
+                          decoration: BoxDecoration(
+                            color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isDark ? AppColors.borderDark : AppColors.borderLight,
+                            ),
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              value: controller.selectedPaidByPersonId.value.isNotEmpty
+                                  ? controller.selectedPaidByPersonId.value
+                                  : null,
+                              hint: const Text('Select who paid'),
+                              isExpanded: true,
+                              dropdownColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+                              items: controller.tripPeople.map((p) {
+                                return DropdownMenuItem<String>(
+                                  value: p.id,
+                                  child: Text(
+                                    p.name,
+                                    style: AppTextStyles.bodyMedium(isDark: isDark),
+                                  ),
+                                );
+                              }).toList(),
+                              onChanged: (val) {
+                                if (val != null) {
+                                  controller.selectedPaidByPersonId.value = val;
+                                }
+                              },
+                            ),
+                          ),
                         ),
-                      ),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                          value: controller.selectedPaidByPersonId.value.isNotEmpty
-                              ? controller.selectedPaidByPersonId.value
-                              : null,
-                          hint: const Text('Select who paid'),
-                          isExpanded: true,
-                          dropdownColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-                          items: controller.tripPeople.map((p) {
-                            return DropdownMenuItem<String>(
-                              value: p.id,
-                              child: Text(
-                                p.name,
-                                style: AppTextStyles.bodyMedium(isDark: isDark),
-                              ),
-                            );
-                          }).toList(),
-                          onChanged: (val) {
-                            if (val != null) {
-                              controller.selectedPaidByPersonId.value = val;
-                            }
+                        SizedBox(height: isDesktop ? 24.0 : 24.h),
+
+                        // Split Options Section
+                        Text('Split Mode', style: AppTextStyles.h3(isDark: isDark)),
+                        SizedBox(height: isDesktop ? 10.0 : 10.h),
+                        SegmentedButton<SplitType>(
+                          segments: const [
+                            ButtonSegment(
+                              value: SplitType.equal,
+                              label: Text('Equal'),
+                              icon: Icon(Icons.drag_handle_rounded),
+                            ),
+                            ButtonSegment(
+                              value: SplitType.unequal,
+                              label: Text('Unequal'),
+                              icon: Icon(Icons.tune_rounded),
+                            ),
+                            ButtonSegment(
+                              value: SplitType.percentage,
+                              label: Text('Percentage'),
+                              icon: Icon(Icons.percent_rounded),
+                            ),
+                          ],
+                          selected: {controller.selectedSplitType.value},
+                          onSelectionChanged: (set) {
+                            controller.selectedSplitType.value = set.first;
+                            controller.update();
                           },
                         ),
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: isDesktop ? 24.0 : 24.h),
-
-                  // Split Options Section
-                  Text('Split Mode', style: AppTextStyles.h3(isDark: isDark)),
-                  SizedBox(height: isDesktop ? 10.0 : 10.h),
-                  Obx(
-                    () => SegmentedButton<SplitType>(
-                      segments: const [
-                        ButtonSegment(
-                          value: SplitType.equal,
-                          label: Text('Equal'),
-                          icon: Icon(Icons.drag_handle_rounded),
-                        ),
-                        ButtonSegment(
-                          value: SplitType.unequal,
-                          label: Text('Unequal'),
-                          icon: Icon(Icons.tune_rounded),
-                        ),
-                        ButtonSegment(
-                          value: SplitType.percentage,
-                          label: Text('Percentage'),
-                          icon: Icon(Icons.percent_rounded),
-                        ),
+                        SizedBox(height: isDesktop ? 16.0 : 16.h),
                       ],
-                      selected: {controller.selectedSplitType.value},
-                      onSelectionChanged: (set) {
-                        controller.selectedSplitType.value = set.first;
-                        controller.update();
-                      },
-                    ),
-                  ),
-                  SizedBox(height: isDesktop ? 16.0 : 16.h),
+                    );
+                  }),
 
                   // Participants List & Live Shares Preview
                   Text('Expense Participants', style: AppTextStyles.label(isDark: isDark)),
                   SizedBox(height: isDesktop ? 8.0 : 8.h),
                   Obx(
                     () {
-                      final splitsData = controller.calculateSplitsData();
+                      final isBatch = controller.isSelfPaidMode.value;
+                      final splitsData = isBatch ? [] : controller.calculateSplitsData();
                       final splitsMap = {
                         for (var s in splitsData) s['person_id'] as String: s['share_amount'] as double
                       };
+                      final customAmt = controller.totalAmount;
 
                       return Column(
                         children: controller.tripPeople.map((person) {
@@ -273,7 +311,16 @@ class AddExpenseScreen extends GetView<AddExpenseController> {
                                   ),
 
                                   // Shares UI per mode
-                                  if (controller.selectedSplitType.value == SplitType.equal)
+                                  if (isBatch)
+                                    Text(
+                                      isIncluded ? '₹${customAmt.toStringAsFixed(2)}' : '₹0.00',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: isDesktop ? 16.0 : 16.sp,
+                                        color: isIncluded ? AppColors.primary : Colors.grey,
+                                      ),
+                                    )
+                                  else if (controller.selectedSplitType.value == SplitType.equal)
                                     Text(
                                       isIncluded ? '₹${shareVal.toStringAsFixed(2)}' : '₹0.00',
                                       style: TextStyle(

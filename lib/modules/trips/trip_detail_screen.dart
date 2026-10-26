@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_text_styles.dart';
+import '../../data/models/balance_model.dart';
 import '../../widgets/responsive_layout.dart';
 import '../../widgets/loading_indicator.dart';
 import 'trip_detail_controller.dart';
@@ -257,71 +258,37 @@ class TripDetailScreen extends GetView<TripDetailController> {
                                     ),
                                   )
                                 else
-                                  Column(
-                                    children: controller.personBalances.map((b) {
-                                      final net = b.netBalance;
-                                      return Card(
-                                        margin: EdgeInsets.only(bottom: isDesktop ? 10.0 : 8.h),
-                                        child: Padding(
-                                          padding: EdgeInsets.all(isDesktop ? 14.0 : 12.r),
-                                          child: Row(
-                                            children: [
-                                              CircleAvatar(
-                                                backgroundColor: AppColors.primaryLight,
-                                                child: Text(
-                                                  b.person.name.isNotEmpty ? b.person.name[0] : 'P',
-                                                  style: const TextStyle(
-                                                    color: AppColors.primary,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                ),
-                                              ),
-                                              SizedBox(width: isDesktop ? 12.0 : 12.w),
-                                              Expanded(
-                                                child: Column(
-                                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                                  children: [
-                                                    Text(
-                                                      b.person.name,
-                                                      style: AppTextStyles.bodyMedium(isDark: isDark)
-                                                          .copyWith(fontWeight: FontWeight.bold),
-                                                    ),
-                                                    const SizedBox(height: 2),
-                                                    Text(
-                                                      'Paid: ₹${b.totalPaid.toStringAsFixed(2)} • Share: ₹${b.totalShare.toStringAsFixed(2)}',
-                                                      style: AppTextStyles.bodySmall(isDark: isDark),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                              Column(
-                                                crossAxisAlignment: CrossAxisAlignment.end,
-                                                children: [
-                                                  Text(
-                                                    net > 0
-                                                        ? 'Gets back ₹${net.toStringAsFixed(2)}'
-                                                        : net < 0
-                                                            ? 'Owes ₹${net.abs().toStringAsFixed(2)}'
-                                                            : 'Settled ₹0.00',
-                                                    style: TextStyle(
-                                                      fontSize: isDesktop ? 15.0 : 15.sp,
-                                                      fontWeight: FontWeight.bold,
-                                                      color: net > 0
-                                                          ? AppColors.owed
-                                                          : net < 0
-                                                              ? AppColors.owe
-                                                              : AppColors.settled,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ],
+                                  LayoutBuilder(
+                                    builder: (context, constraints) {
+                                      if (constraints.maxWidth >= 600) {
+                                        return GridView.builder(
+                                          shrinkWrap: true,
+                                          physics: const NeverScrollableScrollPhysics(),
+                                          gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                                            maxCrossAxisExtent: 400,
+                                            mainAxisExtent: 180,
+                                            crossAxisSpacing: 16,
+                                            mainAxisSpacing: 16,
                                           ),
-                                        ),
+                                          itemCount: controller.personBalances.length,
+                                          itemBuilder: (context, index) {
+                                            return _buildDetailedBalanceCard(
+                                              context,
+                                              controller.personBalances[index],
+                                              isDark,
+                                              isDesktop: true,
+                                            );
+                                          },
+                                        );
+                                      }
+                                      return Column(
+                                        children: controller.personBalances.map((b) {
+                                          return _buildDetailedBalanceCard(context, b, isDark, isDesktop: false);
+                                        }).toList(),
                                       );
-                                    }).toList(),
+                                    },
                                   ),
-                                SizedBox(height: isDesktop ? 24.0 : 28.h),
+                                SizedBox(height: isDesktop ? 32.0 : 28.h),
 
                                 // 2. SIMPLIFY DEBTS SECTION
                                 Row(
@@ -569,6 +536,102 @@ class TripDetailScreen extends GetView<TripDetailController> {
     );
   }
 
+  Widget _buildDetailedBalanceCard(BuildContext context, PersonBalanceModel b, bool isDark, {required bool isDesktop}) {
+    final net = b.netBalance;
+    return Card(
+      margin: EdgeInsets.only(bottom: isDesktop ? 0 : 12.h),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: isDark ? AppColors.borderDark : AppColors.borderLight),
+      ),
+      elevation: 0,
+      color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+      child: Padding(
+        padding: EdgeInsets.all(isDesktop ? 16.0 : 16.r),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  backgroundColor: AppColors.primaryLight,
+                  child: Text(
+                    b.person.name.isNotEmpty ? b.person.name[0] : 'P',
+                    style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                SizedBox(width: isDesktop ? 12.0 : 12.w),
+                Expanded(
+                  child: Text(
+                    b.person.name,
+                    style: AppTextStyles.bodyLarge(isDark: isDark).copyWith(fontWeight: FontWeight.bold),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: net > 0
+                        ? AppColors.owed.withValues(alpha: 0.15)
+                        : (net < 0 ? AppColors.owe.withValues(alpha: 0.15) : Colors.grey.withValues(alpha: 0.15)),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    net > 0 ? 'Gets back' : (net < 0 ? 'Owes' : 'Settled'),
+                    style: TextStyle(
+                      fontSize: isDesktop ? 12.0 : 12.sp,
+                      fontWeight: FontWeight.bold,
+                      color: net > 0 ? AppColors.owed : (net < 0 ? AppColors.owe : Colors.grey),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            Divider(height: isDesktop ? 24.0 : 24.h),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Total Spent (Share)', style: AppTextStyles.bodyMedium(isDark: isDark)),
+                Text(
+                  '₹${b.totalShare.toStringAsFixed(2)}',
+                  style: TextStyle(fontSize: isDesktop ? 15.0 : 15.sp, fontWeight: FontWeight.w600, color: AppColors.primary),
+                ),
+              ],
+            ),
+            SizedBox(height: isDesktop ? 8.0 : 8.h),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Total Paid by them', style: AppTextStyles.bodyMedium(isDark: isDark)),
+                Text(
+                  '₹${b.totalPaid.toStringAsFixed(2)}',
+                  style: TextStyle(fontSize: isDesktop ? 15.0 : 15.sp, fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black),
+                ),
+              ],
+            ),
+            SizedBox(height: isDesktop ? 8.0 : 8.h),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Net Balance', style: AppTextStyles.bodyMedium(isDark: isDark).copyWith(fontWeight: FontWeight.bold)),
+                Text(
+                  net > 0 ? '+₹${net.toStringAsFixed(2)}' : (net < 0 ? '-₹${net.abs().toStringAsFixed(2)}' : '₹0.00'),
+                  style: TextStyle(
+                    fontSize: isDesktop ? 16.0 : 16.sp,
+                    fontWeight: FontWeight.bold,
+                    color: net > 0 ? AppColors.owed : (net < 0 ? AppColors.owe : Colors.grey),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildMiniStatCard(
     BuildContext context,
     String label,
@@ -582,7 +645,7 @@ class TripDetailScreen extends GetView<TripDetailController> {
       padding: EdgeInsets.all(isDesktop ? 12.0 : 10.r),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(12.r),
       ),
       child: Column(
         children: [
@@ -597,10 +660,10 @@ class TripDetailScreen extends GetView<TripDetailController> {
               ),
             ),
           ),
-          const SizedBox(height: 2),
+          SizedBox(height: 2.h),
           Text(
             label,
-            style: AppTextStyles.bodySmall(isDark: isDark).copyWith(fontSize: 11),
+            style: AppTextStyles.bodySmall(isDark: isDark).copyWith(fontSize: 11.sp),
           ),
         ],
       ),

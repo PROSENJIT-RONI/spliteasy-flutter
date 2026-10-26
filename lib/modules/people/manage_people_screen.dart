@@ -72,7 +72,6 @@ class ManagePeopleScreen extends GetView<ManagePeopleController> {
                 itemCount: controller.people.length,
                 itemBuilder: (context, index) {
                   final person = controller.people[index];
-
                   return Card(
                     margin: EdgeInsets.only(bottom: isDesktop ? 10.0 : 10.h),
                     child: Padding(
