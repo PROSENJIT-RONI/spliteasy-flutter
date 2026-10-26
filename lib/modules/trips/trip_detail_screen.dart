@@ -230,11 +230,87 @@ class TripDetailScreen extends GetView<TripDetailController> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
+                                // --- SHAREABLE TRIP EXPENSE SUMMARY CARD ---
+                                if (controller.personBalances.isNotEmpty) ...[
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      color: isDark ? AppColors.surfaceDark : Colors.white,
+                                      borderRadius: BorderRadius.circular(16),
+                                      border: Border.all(color: AppColors.primary.withValues(alpha: 0.3), width: 1.5),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: AppColors.primary.withValues(alpha: 0.05),
+                                          blurRadius: 10,
+                                          offset: const Offset(0, 4),
+                                        ),
+                                      ],
+                                    ),
+                                    padding: EdgeInsets.all(isDesktop ? 24.0 : 20.r),
+                                    margin: EdgeInsets.only(bottom: isDesktop ? 24.0 : 24.h),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Icon(Icons.receipt_long_rounded, color: AppColors.primary, size: isDesktop ? 24 : 24.sp),
+                                            const SizedBox(width: 8),
+                                            Text(
+                                              'Trip Expense Summary',
+                                              style: AppTextStyles.h3(isDark: isDark).copyWith(color: AppColors.primary),
+                                            ),
+                                          ],
+                                        ),
+                                        SizedBox(height: isDesktop ? 20.0 : 16.h),
+                                        ...controller.personBalances.map((b) {
+                                          return Padding(
+                                            padding: EdgeInsets.only(bottom: isDesktop ? 10.0 : 8.h),
+                                            child: Row(
+                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                              children: [
+                                                Text(
+                                                  b.person.name,
+                                                  style: AppTextStyles.bodyMedium(isDark: isDark).copyWith(fontWeight: FontWeight.w500),
+                                                ),
+                                                Text(
+                                                  '₹${b.totalShare.toStringAsFixed(2)}',
+                                                  style: AppTextStyles.bodyMedium(isDark: isDark).copyWith(fontWeight: FontWeight.bold),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                        }),
+                                        Padding(
+                                          padding: EdgeInsets.symmetric(vertical: isDesktop ? 12.0 : 10.h),
+                                          child: const Divider(),
+                                        ),
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(
+                                              'Total Trip Expense',
+                                              style: AppTextStyles.bodyLarge(isDark: isDark).copyWith(fontWeight: FontWeight.bold),
+                                            ),
+                                            Text(
+                                              '₹${controller.totalExpenseAmount.value.toStringAsFixed(2)}',
+                                              style: TextStyle(
+                                                fontSize: isDesktop ? 18.0 : 18.sp,
+                                                fontWeight: FontWeight.bold,
+                                                color: AppColors.primary,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+
                                 // 1. BALANCES SECTION
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Text('Balances', style: AppTextStyles.h3(isDark: isDark)),
+                                    Text('Balances (Paid vs Share)', style: AppTextStyles.h3(isDark: isDark)),
                                     OutlinedButton.icon(
                                       onPressed: controller.goToManagePeople,
                                       icon: const Icon(Icons.people_outline_rounded, size: 18),
