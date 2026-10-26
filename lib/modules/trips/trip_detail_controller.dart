@@ -1,3 +1,5 @@
+import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart'; // for kIsWeb
 import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../data/models/trip_model.dart';
@@ -26,7 +28,7 @@ class TripDetailController extends GetxController {
 
   final RxDouble totalExpenseAmount = 0.0.obs;
   final RxBool isLoading = false.obs;
-  final RxInt activeTab = 0.obs; // 0 = Balances & People, 1 = Expenses
+  final RxInt activeTab = 0.obs;
 
   String tripId = '';
 
@@ -64,17 +66,38 @@ class TripDetailController extends GetxController {
         }
         totalExpenseAmount.value = total;
 
-        // Run Balance Engine & Debt Simplification Algorithm
         final balances = _balanceService.calculatePersonBalances(pList, expList);
         personBalances.assignAll(balances);
 
-        final suggestions =
-            _balanceService.calculateSettlementSuggestions(balances);
+        final suggestions = _balanceService.calculateSettlementSuggestions(balances);
         settlementSuggestions.assignAll(suggestions);
       }
     } finally {
       isLoading.value = false;
     }
+  }
+
+  String getPersonName(String personId) {
+    final match = people.firstWhereOrNull((p) => p.id == personId);
+    return match?.name ?? 'Someone';
+  }
+
+  void shareTrip() {
+    if (tripId.isEmpty) return;
+    
+    String baseUrl = 'https://spliteasyflutter.netlify.app';
+    if (kIsWeb) {
+      baseUrl = Uri.base.origin;
+    }
+
+    final shareLink = '$baseUrl/#/shared?tripId=$tripId';
+    
+    Clipboard.setData(ClipboardData(text: shareLink)).then((_) {
+      CustomToast.info(
+        'Public Link Copied! Anyone with this link can view this trip.', 
+        title: 'Link Copied 🔗'
+      );
+    });
   }
 
   void goToEditTrip() {

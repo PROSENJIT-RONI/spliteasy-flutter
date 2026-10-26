@@ -10,4 +10,5 @@ abstract class Routes {
   static const addExpense = '/add-expense';
   static const expenseDetail = '/expense-detail';
   static const profile = '/profile';
+  static const sharedTrip = '/shared';
 }

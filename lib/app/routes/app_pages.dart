@@ -28,6 +28,9 @@ import '../../modules/expenses/expense_detail_binding.dart';
 
 import '../../modules/profile/profile_screen.dart';
 
+import '../../modules/shared_trip/shared_trip_screen.dart';
+import '../../modules/shared_trip/shared_trip_binding.dart';
+
 class AppPages {
   static const initial = Routes.splash;
 
@@ -79,6 +82,11 @@ class AppPages {
     GetPage(
       name: Routes.profile,
       page: () => const ProfileScreen(),
+    ),
+    GetPage(
+      name: Routes.sharedTrip,
+      page: () => const SharedTripScreen(),
+      binding: SharedTripBinding(),
     ),
   ];
 }

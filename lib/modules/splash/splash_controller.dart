@@ -13,6 +13,14 @@ class SplashController extends GetxController {
 
   Future<void> _navigateToNext() async {
     await Future.delayed(const Duration(milliseconds: 1500));
+    
+    // Check if the app was launched with a shared web link (e.g. /shared?tripId=123)
+    final currentRoute = Get.currentRoute;
+    if (currentRoute.startsWith(Routes.sharedTrip)) {
+      // Do nothing, GetX Web routing will automatically handle the URL transition
+      return;
+    }
+
     final isLoggedIn = await _authService.checkAuthStatus();
     if (isLoggedIn) {
       Get.offAllNamed(Routes.main);

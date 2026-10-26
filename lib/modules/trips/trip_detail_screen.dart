@@ -22,6 +22,11 @@ class TripDetailScreen extends GetView<TripDetailController> {
         title: Obx(() => Text(controller.trip.value?.name ?? 'Trip Details')),
         actions: [
           IconButton(
+            icon: const Icon(Icons.share_outlined),
+            onPressed: controller.shareTrip,
+            tooltip: 'Share Public Link',
+          ),
+          IconButton(
             icon: const Icon(Icons.edit_outlined),
             onPressed: controller.goToEditTrip,
             tooltip: 'Edit Trip',
@@ -483,116 +488,50 @@ class TripDetailScreen extends GetView<TripDetailController> {
 
                           // TAB 1: Expenses History
                           controller.expenses.isEmpty
-                              ? Center(
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(
-                                        Icons.receipt_long_outlined,
-                                        size: isDesktop ? 48.0 : 48.sp,
-                                        color: AppColors.textSecondaryLight,
-                                      ),
-                                      SizedBox(height: isDesktop ? 12.0 : 12.h),
-                                      Text(
-                                        'No Expenses Recorded Yet',
-                                        style: AppTextStyles.h3(isDark: isDark),
-                                      ),
-                                      SizedBox(height: isDesktop ? 16.0 : 16.h),
-                                      ElevatedButton.icon(
-                                        onPressed: controller.goToAddExpense,
-                                        icon: const Icon(Icons.add_rounded),
-                                        label: const Text('Add Expense'),
-                                      ),
-                                    ],
-                                  ),
-                                )
+                              ? const Center(child: Text('No Expenses Recorded Yet'))
                               : ListView.builder(
                                   padding: EdgeInsets.all(isDesktop ? 20.0 : 16.r),
                                   itemCount: controller.expenses.length,
                                   itemBuilder: (context, index) {
                                     final exp = controller.expenses[index];
-                                    final dateStr =
-                                        DateFormat('dd/MM/yyyy').format(exp.expenseDate);
-
-                                    final paidPerson = controller.people.firstWhereOrNull(
-                                      (p) => p.id == exp.paidByPersonId,
-                                    );
-                                    final paidByName = paidPerson?.name ?? 'Someone';
+                                    final dateStr = DateFormat('dd/MM/yyyy').format(exp.expenseDate);
+                                    final paidByName = controller.getPersonName(exp.paidByPersonId);
 
                                     return Card(
                                       margin: EdgeInsets.only(bottom: isDesktop ? 10.0 : 10.h),
-                                      child: InkWell(
-                                        onTap: () => controller.goToExpenseDetail(exp.id),
-                                        borderRadius: BorderRadius.circular(12),
-                                        child: Padding(
-                                          padding: EdgeInsets.all(isDesktop ? 14.0 : 12.r),
-                                          child: Row(
-                                            children: [
-                                              CircleAvatar(
-                                                backgroundColor: AppColors.primaryLight,
-                                                child: Icon(
-                                                  _getCategoryIcon(exp.category),
-                                                  color: AppColors.primary,
-                                                  size: 20,
-                                                ),
-                                              ),
-                                              SizedBox(width: isDesktop ? 12.0 : 12.w),
-                                              Expanded(
-                                                child: Column(
-                                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                                  children: [
-                                                    Text(
-                                                      exp.description,
-                                                      maxLines: 1,
-                                                      overflow: TextOverflow.ellipsis,
-                                                      style: AppTextStyles.bodyLarge(isDark: isDark)
-                                                          .copyWith(fontWeight: FontWeight.bold),
-                                                    ),
-                                                    const SizedBox(height: 2),
-                                                    Text(
-                                                      'Paid by $paidByName • ${exp.splitType.name.toUpperCase()} split • $dateStr',
-                                                      maxLines: 1,
-                                                      overflow: TextOverflow.ellipsis,
-                                                      style: AppTextStyles.bodySmall(isDark: isDark),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                              SizedBox(width: isDesktop ? 8.0 : 8.w),
-                                              Column(
-                                                crossAxisAlignment: CrossAxisAlignment.end,
-                                                children: [
-                                                  Text(
-                                                    '₹${exp.totalAmount.toStringAsFixed(2)}',
-                                                    style: TextStyle(
-                                                      fontSize: isDesktop ? 15.0 : 15.sp,
-                                                      fontWeight: FontWeight.bold,
-                                                      color: isDark
-                                                          ? AppColors.textPrimaryDark
-                                                          : AppColors.textPrimaryLight,
-                                                    ),
-                                                  ),
-                                                  Text(
-                                                    '${exp.splits.length} participants',
-                                                    style: TextStyle(
-                                                      fontSize: 11,
-                                                      color: AppColors.primary,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ],
-                                          ),
+                                      child: ListTile(
+                                        leading: CircleAvatar(
+                                          backgroundColor: AppColors.primaryLight,
+                                          child: Icon(
+                                            _getCategoryIcon(exp.category),
+                                            color: AppColors.primary,
+                                            size: 20,
                                         ),
                                       ),
-                                    );
-                                  },
-                                ),
-                        ],
-                      ),
+                                      title: Text(
+                                        exp.description,
+                                        style: AppTextStyles.bodyLarge(isDark: isDark).copyWith(fontWeight: FontWeight.bold),
+                                      ),
+                                      subtitle: Text(
+                                        'Paid by $paidByName • ${exp.splitType.name.toUpperCase()} split • $dateStr',
+                                        style: AppTextStyles.bodySmall(isDark: isDark),
+                                      ),
+                                      trailing: Text(
+                                        '₹${exp.totalAmount.toStringAsFixed(2)}',
+                                        style: TextStyle(
+                                          fontSize: isDesktop ? 15.0 : 15.sp,
+                                          fontWeight: FontWeight.bold,
+                                          color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                      ],
                     ),
                   ),
-                ),
+                ),),
               ],
             );
           },
