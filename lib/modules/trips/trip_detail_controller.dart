@@ -148,6 +148,37 @@ class TripDetailController extends GetxController {
         ?.then((_) => loadTripData());
   }
 
+  Future<void> updatePersonAdvance(String personId, double amount, bool isSettled) async {
+    try {
+      await _tripService.updateTripPersonAdvance(
+        personId,
+        advanceAmount: amount,
+        isAdvanceSettled: isSettled,
+      );
+      await loadTripData();
+      CustomToast.success('Advance updated successfully');
+    } catch (e) {
+      CustomToast.error('Failed to update advance');
+    }
+  }
+
+  Future<void> toggleAdvanceSettled(String personId, bool currentStatus) async {
+    try {
+      final person = people.firstWhereOrNull((p) => p.id == personId);
+      if (person != null) {
+        await _tripService.updateTripPersonAdvance(
+          personId,
+          advanceAmount: person.advanceAmount,
+          isAdvanceSettled: !currentStatus,
+        );
+        await loadTripData();
+        CustomToast.success(currentStatus ? 'Marked as unsettled' : 'Marked as settled');
+      }
+    } catch (e) {
+      CustomToast.error('Failed to update settlement status');
+    }
+  }
+
   void goToExpenseDetail(String expenseId) {
     final tId = trip.value?.id ?? tripId;
     Get.toNamed('${Routes.expenseDetail}?tripId=$tId&expenseId=$expenseId', arguments: {

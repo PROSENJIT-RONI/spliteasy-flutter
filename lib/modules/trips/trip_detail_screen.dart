@@ -165,7 +165,7 @@ class TripDetailScreen extends GetView<TripDetailController> {
                                 ),
                               ),
                               child: Text(
-                                'People & Balances',
+                                'Balances',
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
                                   fontWeight: controller.activeTab.value == 0
@@ -197,7 +197,39 @@ class TripDetailScreen extends GetView<TripDetailController> {
                                 ),
                               ),
                               child: Text(
-                                'Expenses History (${controller.expenses.length})',
+                                'Advances',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontWeight: controller.activeTab.value == 1
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                  color: controller.activeTab.value == 1
+                                      ? AppColors.primary
+                                      : (isDark
+                                          ? AppColors.textSecondaryDark
+                                          : AppColors.textSecondaryLight),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: InkWell(
+                            onTap: () => controller.activeTab.value = 2,
+                            child: Container(
+                              padding: EdgeInsets.symmetric(vertical: isDesktop ? 14.0 : 12.h),
+                              decoration: BoxDecoration(
+                                border: Border(
+                                  bottom: BorderSide(
+                                    color: controller.activeTab.value == 2
+                                        ? AppColors.primary
+                                        : Colors.transparent,
+                                    width: 2,
+                                  ),
+                                ),
+                              ),
+                              child: Text(
+                                'Expenses',
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
                                   fontWeight: controller.activeTab.value == 1
@@ -486,11 +518,19 @@ class TripDetailScreen extends GetView<TripDetailController> {
                             ),
                           ),
 
-                          // TAB 1: Expenses History
+                          // TAB 1: Advances
+                          _buildAdvancesTab(context, isDark, isDesktop),
+
+                          // TAB 2: Expenses History
                           controller.expenses.isEmpty
                               ? const Center(child: Text('No Expenses Recorded Yet'))
                               : ListView.builder(
-                                  padding: EdgeInsets.all(isDesktop ? 20.0 : 16.r),
+                                  padding: EdgeInsets.only(
+                                    left: isDesktop ? 20.0 : 16.r,
+                                    right: isDesktop ? 20.0 : 16.r,
+                                    top: isDesktop ? 20.0 : 16.r,
+                                    bottom: 100.0,
+                                  ),
                                   itemCount: controller.expenses.length,
                                   itemBuilder: (context, index) {
                                     final exp = controller.expenses[index];
@@ -538,7 +578,7 @@ class TripDetailScreen extends GetView<TripDetailController> {
         ),
       ),
       floatingActionButton: Obx(
-        () => controller.activeTab.value == 1
+        () => controller.activeTab.value == 2
             ? FloatingActionButton.extended(
                 heroTag: 'trip_detail_fab',
                 onPressed: controller.goToAddExpense,
@@ -546,8 +586,242 @@ class TripDetailScreen extends GetView<TripDetailController> {
                 icon: const Icon(Icons.add_rounded, color: Colors.white),
                 label: const Text('Add Expense', style: TextStyle(color: Colors.white)),
               )
-            : const SizedBox.shrink(),
+            : (controller.activeTab.value == 1 
+                ? FloatingActionButton.extended(
+                    heroTag: 'trip_advance_fab',
+                    onPressed: () => _showAddAdvanceDialog(context),
+                    backgroundColor: AppColors.secondary,
+                    icon: const Icon(Icons.money_rounded, color: Colors.white),
+                    label: const Text('Add Advance', style: TextStyle(color: Colors.white)),
+                  )
+                : const SizedBox.shrink()),
       ),
+    );
+  }
+
+  Widget _buildAdvancesTab(BuildContext context, bool isDark, bool isDesktop) {
+    if (controller.personBalances.isEmpty) {
+      return Center(
+        child: Text('No participants added yet.', style: AppTextStyles.bodyMedium(isDark: isDark)),
+      );
+    }
+
+    return ListView.builder(
+      padding: EdgeInsets.only(
+        left: isDesktop ? 20.0 : 16.r,
+        right: isDesktop ? 20.0 : 16.r,
+        top: isDesktop ? 20.0 : 16.r,
+        bottom: 100.0,
+      ),
+      itemCount: controller.personBalances.length,
+      itemBuilder: (context, index) {
+        final b = controller.personBalances[index];
+        final p = b.person;
+        final advance = p.advanceAmount;
+        final share = b.totalShare;
+        final diff = advance - share;
+        final isSettled = p.isAdvanceSettled;
+
+        return Card(
+          margin: EdgeInsets.only(bottom: isDesktop ? 12.0 : 12.h),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(color: isDark ? AppColors.borderDark : AppColors.borderLight),
+          ),
+          color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+          child: Padding(
+            padding: EdgeInsets.all(isDesktop ? 16.0 : 16.r),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          backgroundColor: AppColors.textSecondaryLight,
+                          child: Text(
+                            p.name.isNotEmpty ? p.name[0] : 'P',
+                            style: const TextStyle(color: AppColors.secondary, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        SizedBox(width: isDesktop ? 12.0 : 12.w),
+                        Text(
+                          p.name,
+                          style: AppTextStyles.bodyLarge(isDark: isDark).copyWith(fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                    if (advance > 0 || diff != 0)
+                      TextButton.icon(
+                        onPressed: () => controller.toggleAdvanceSettled(p.id, isSettled),
+                        icon: Icon(
+                          isSettled ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                          color: isSettled ? Colors.green : AppColors.primary,
+                          size: 20,
+                        ),
+                        label: Text(
+                          isSettled ? 'Settled' : 'Mark Settled',
+                          style: TextStyle(
+                            color: isSettled ? Colors.green : AppColors.primary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                Divider(height: isDesktop ? 24.0 : 24.h),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Advance Paid', style: AppTextStyles.bodyMedium(isDark: isDark)),
+                    Text(
+                      '₹${advance.toStringAsFixed(2)}',
+                      style: TextStyle(fontSize: isDesktop ? 15.0 : 15.sp, fontWeight: FontWeight.w600, color: AppColors.secondary),
+                    ),
+                  ],
+                ),
+                SizedBox(height: isDesktop ? 8.0 : 8.h),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Expense Share', style: AppTextStyles.bodyMedium(isDark: isDark)),
+                    Text(
+                      '₹${share.toStringAsFixed(2)}',
+                      style: TextStyle(fontSize: isDesktop ? 15.0 : 15.sp, fontWeight: FontWeight.w600, color: AppColors.primary),
+                    ),
+                  ],
+                ),
+                SizedBox(height: isDesktop ? 8.0 : 8.h),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(diff >= 0 ? 'To Receive' : 'To Pay', style: AppTextStyles.bodyMedium(isDark: isDark).copyWith(fontWeight: FontWeight.bold)),
+                    Text(
+                      '₹${diff.abs().toStringAsFixed(2)}',
+                      style: TextStyle(
+                        fontSize: isDesktop ? 16.0 : 16.sp,
+                        fontWeight: FontWeight.bold,
+                        color: diff >= 0 ? AppColors.owed : AppColors.owe,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showAddAdvanceDialog(BuildContext context) {
+    if (controller.people.isEmpty) {
+      Get.snackbar('No Participants', 'Please add participants first.');
+      return;
+    }
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    String? selectedPersonId = controller.people.first.id;
+    final amountController = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+                left: 20,
+                right: 20,
+                top: 20,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Add Advance Payment',
+                    style: AppTextStyles.h2(isDark: isDark),
+                  ),
+                  const SizedBox(height: 20),
+                  Text('Select Participant', style: AppTextStyles.bodyMedium(isDark: isDark)),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    value: selectedPersonId,
+                    dropdownColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    ),
+                    items: controller.people.map((p) {
+                      return DropdownMenuItem(
+                        value: p.id,
+                        child: Text(p.name, style: AppTextStyles.bodyMedium(isDark: isDark)),
+                      );
+                    }).toList(),
+                    onChanged: (val) {
+                      setState(() {
+                        selectedPersonId = val;
+                        // Auto-fill existing advance if any
+                        final person = controller.people.firstWhereOrNull((p) => p.id == val);
+                        if (person != null && person.advanceAmount > 0) {
+                          amountController.text = person.advanceAmount.toStringAsFixed(2);
+                        } else {
+                          amountController.text = '';
+                        }
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  Text('Advance Amount (₹)', style: AppTextStyles.bodyMedium(isDark: isDark)),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: amountController,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    style: AppTextStyles.bodyLarge(isDark: isDark),
+                    decoration: InputDecoration(
+                      hintText: 'Enter amount...',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.secondary,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      onPressed: () {
+                        if (selectedPersonId == null) return;
+                        final amount = double.tryParse(amountController.text) ?? 0.0;
+                        if (amount < 0) {
+                          Get.snackbar('Error', 'Amount must be positive');
+                          return;
+                        }
+                        controller.updatePersonAdvance(selectedPersonId!, amount, false);
+                        Get.back();
+                      },
+                      child: const Text('Save Advance', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 

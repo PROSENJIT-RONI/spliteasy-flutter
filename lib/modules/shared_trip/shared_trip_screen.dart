@@ -223,6 +223,38 @@ class SharedTripScreen extends GetView<SharedTripController> {
                                 ),
                               ),
                               child: Text(
+                                'Advances',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontWeight: controller.activeTab.value == 1
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                  color: controller.activeTab.value == 1
+                                      ? AppColors.primary
+                                      : (isDark
+                                          ? AppColors.textSecondaryDark
+                                          : AppColors.textSecondaryLight),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: InkWell(
+                            onTap: () => controller.activeTab.value = 2,
+                            child: Container(
+                              padding: EdgeInsets.symmetric(vertical: isDesktop ? 14.0 : 12.h),
+                              decoration: BoxDecoration(
+                                border: Border(
+                                  bottom: BorderSide(
+                                    color: controller.activeTab.value == 2
+                                        ? AppColors.primary
+                                        : Colors.transparent,
+                                    width: 2,
+                                  ),
+                                ),
+                              ),
+                              child: Text(
                                 'Expenses History',
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
@@ -467,7 +499,10 @@ class SharedTripScreen extends GetView<SharedTripController> {
                           ),
                         ),
 
-                        // TAB 1: Expenses History
+                        // TAB 1: Advances
+                        _buildAdvancesTab(context, isDark, isDesktop),
+
+                        // TAB 2: Expenses History
                         controller.expenses.isEmpty
                             ? const Center(child: Text('No Expenses Recorded Yet'))
                             : ListView.builder(
@@ -518,6 +553,118 @@ class SharedTripScreen extends GetView<SharedTripController> {
           },
         ),
       ),
+    );
+  }
+
+  Widget _buildAdvancesTab(BuildContext context, bool isDark, bool isDesktop) {
+    if (controller.personBalances.isEmpty) {
+      return Center(
+        child: Text('No participants found.', style: AppTextStyles.bodyMedium(isDark: isDark)),
+      );
+    }
+
+    return ListView.builder(
+      padding: EdgeInsets.all(isDesktop ? 20.0 : 16.r),
+      itemCount: controller.personBalances.length,
+      itemBuilder: (context, index) {
+        final b = controller.personBalances[index];
+        final p = b.person;
+        final advance = p.advanceAmount;
+        final share = b.totalShare;
+        final diff = advance - share;
+        final isSettled = p.isAdvanceSettled;
+
+        return Card(
+          margin: EdgeInsets.only(bottom: isDesktop ? 12.0 : 12.h),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(color: isDark ? AppColors.borderDark : AppColors.borderLight),
+          ),
+          color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+          child: Padding(
+            padding: EdgeInsets.all(isDesktop ? 16.0 : 16.r),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          backgroundColor: AppColors.textSecondaryLight,
+                          child: Text(
+                            p.name.isNotEmpty ? p.name[0] : 'P',
+                            style: const TextStyle(color: AppColors.secondary, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        SizedBox(width: isDesktop ? 12.0 : 12.w),
+                        Text(
+                          p.name,
+                          style: AppTextStyles.bodyLarge(isDark: isDark).copyWith(fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                    if (advance > 0 || diff != 0)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: isSettled ? Colors.green.withValues(alpha: 0.15) : AppColors.primary.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          isSettled ? 'Settled' : 'Not Settled',
+                          style: TextStyle(
+                            fontSize: isDesktop ? 12.0 : 12.sp,
+                            fontWeight: FontWeight.bold,
+                            color: isSettled ? Colors.green : AppColors.primary,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                Divider(height: isDesktop ? 24.0 : 24.h),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Advance Paid', style: AppTextStyles.bodyMedium(isDark: isDark)),
+                    Text(
+                      '₹${advance.toStringAsFixed(2)}',
+                      style: TextStyle(fontSize: isDesktop ? 15.0 : 15.sp, fontWeight: FontWeight.w600, color: AppColors.secondary),
+                    ),
+                  ],
+                ),
+                SizedBox(height: isDesktop ? 8.0 : 8.h),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Expense Share', style: AppTextStyles.bodyMedium(isDark: isDark)),
+                    Text(
+                      '₹${share.toStringAsFixed(2)}',
+                      style: TextStyle(fontSize: isDesktop ? 15.0 : 15.sp, fontWeight: FontWeight.w600, color: AppColors.primary),
+                    ),
+                  ],
+                ),
+                SizedBox(height: isDesktop ? 8.0 : 8.h),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(diff >= 0 ? 'To Receive' : 'To Pay', style: AppTextStyles.bodyMedium(isDark: isDark).copyWith(fontWeight: FontWeight.bold)),
+                    Text(
+                      '₹${diff.abs().toStringAsFixed(2)}',
+                      style: TextStyle(
+                        fontSize: isDesktop ? 16.0 : 16.sp,
+                        fontWeight: FontWeight.bold,
+                        color: diff >= 0 ? AppColors.owed : AppColors.owe,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 

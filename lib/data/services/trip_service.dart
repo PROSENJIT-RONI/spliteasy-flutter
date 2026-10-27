@@ -182,6 +182,27 @@ class TripService extends GetxService {
     return TripPersonModel.fromJson(res);
   }
 
+  Future<TripPersonModel> updateTripPersonAdvance(
+    String personId, {
+    required double advanceAmount,
+    required bool isAdvanceSettled,
+  }) async {
+    final updateData = {
+      'advance_amount': advanceAmount,
+      'is_advance_settled': isAdvanceSettled,
+      'updated_at': DateTime.now().toIso8601String(),
+    };
+
+    final res = await supabase
+        .from('trip_people')
+        .update(updateData)
+        .eq('id', personId)
+        .select()
+        .single();
+
+    return TripPersonModel.fromJson(res);
+  }
+
   Future<void> deleteTripPerson(String personId) async {
     // Check if referenced as paid_by_person_id in trip_expenses
     final expenseCountRes = await supabase
