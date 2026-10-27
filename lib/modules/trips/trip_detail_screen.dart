@@ -657,10 +657,13 @@ class TripDetailScreen extends GetView<TripDetailController> {
     final isDesktop = MediaQuery.of(context).size.width >= 600;
 
     return Container(
-      padding: EdgeInsets.all(isDesktop ? 12.0 : 10.r),
+      padding: EdgeInsets.symmetric(
+        vertical: isDesktop ? 16.0 : 12.h,
+        horizontal: isDesktop ? 12.0 : 8.w,
+      ),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(12.r),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         children: [
@@ -669,16 +672,18 @@ class TripDetailScreen extends GetView<TripDetailController> {
             child: Text(
               value,
               style: TextStyle(
-                fontSize: isDesktop ? 16.0 : 16.sp,
+                fontSize: isDesktop ? 22.0 : 18.sp,
                 fontWeight: FontWeight.bold,
                 color: color,
               ),
             ),
           ),
-          SizedBox(height: 2.h),
+          SizedBox(height: isDesktop ? 6.0 : 4.h),
           Text(
             label,
-            style: AppTextStyles.bodySmall(isDark: isDark).copyWith(fontSize: 11.sp),
+            style: AppTextStyles.bodySmall(isDark: isDark).copyWith(
+              fontSize: isDesktop ? 13.0 : 11.sp,
+            ),
           ),
         ],
       ),

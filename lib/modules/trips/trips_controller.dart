@@ -49,5 +49,5 @@ class TripsController extends GetxController {
       Get.toNamed(Routes.createTrip)?.then((_) => fetchTrips());
 
   void goToTripDetail(String tripId) =>
-      Get.toNamed(Routes.tripDetail, arguments: tripId)?.then((_) => fetchTrips());
+      Get.toNamed('${Routes.tripDetail}?tripId=$tripId', arguments: tripId)?.then((_) => fetchTrips());
 }

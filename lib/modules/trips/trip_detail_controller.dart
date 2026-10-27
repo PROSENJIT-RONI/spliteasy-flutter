@@ -43,6 +43,12 @@ class TripDetailController extends GetxController {
         tripId = args['tripId'] as String;
       }
     }
+    
+    // Web Fallback if refreshed
+    if (tripId.isEmpty && Get.parameters.containsKey('tripId')) {
+      tripId = Get.parameters['tripId']!;
+    }
+    
     loadTripData();
   }
 
@@ -133,18 +139,18 @@ class TripDetailController extends GetxController {
 
   void goToManagePeople() {
     final tId = trip.value?.id ?? tripId;
-    Get.toNamed(Routes.managePeople, arguments: tId)?.then((_) => loadTripData());
+    Get.toNamed('${Routes.managePeople}?tripId=$tId', arguments: tId)?.then((_) => loadTripData());
   }
 
   void goToAddExpense() {
     final tId = trip.value?.id ?? tripId;
-    Get.toNamed(Routes.addExpense, arguments: {'tripId': tId})
+    Get.toNamed('${Routes.addExpense}?tripId=$tId', arguments: {'tripId': tId})
         ?.then((_) => loadTripData());
   }
 
   void goToExpenseDetail(String expenseId) {
     final tId = trip.value?.id ?? tripId;
-    Get.toNamed(Routes.expenseDetail, arguments: {
+    Get.toNamed('${Routes.expenseDetail}?tripId=$tId&expenseId=$expenseId', arguments: {
       'expenseId': expenseId,
       'tripId': tId,
     })?.then((_) => loadTripData());

@@ -76,5 +76,5 @@ class HomeController extends GetxController {
       Get.toNamed(Routes.trips)?.then((_) => loadDashboardData());
 
   void goToTripDetail(String tripId) =>
-      Get.toNamed(Routes.tripDetail, arguments: tripId)?.then((_) => loadDashboardData());
+      Get.toNamed('${Routes.tripDetail}?tripId=$tripId', arguments: tripId)?.then((_) => loadDashboardData());
 }
