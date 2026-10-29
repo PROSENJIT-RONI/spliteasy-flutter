@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_text_styles.dart';
 import '../../data/models/balance_model.dart';
+import '../../data/models/trip_expense_model.dart';
 import '../../widgets/responsive_layout.dart';
 import '../../widgets/loading_indicator.dart';
 import 'trip_detail_controller.dart';
@@ -262,7 +263,12 @@ class TripDetailScreen extends GetView<TripDetailController> {
                         children: [
                           // TAB 0: People Balances & Simplify Debts Section
                           SingleChildScrollView(
-                            padding: EdgeInsets.all(isDesktop ? 20.0 : 16.r),
+                            padding: EdgeInsets.only(
+                              left: isDesktop ? 20.0 : 16.r,
+                              right: isDesktop ? 20.0 : 16.r,
+                              top: isDesktop ? 20.0 : 16.r,
+                              bottom: isDesktop ? 120.0 : 120.h,
+                            ),
                             physics: const AlwaysScrollableScrollPhysics(),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -529,7 +535,7 @@ class TripDetailScreen extends GetView<TripDetailController> {
                                     left: isDesktop ? 20.0 : 16.r,
                                     right: isDesktop ? 20.0 : 16.r,
                                     top: isDesktop ? 20.0 : 16.r,
-                                    bottom: 100.0,
+                                    bottom: isDesktop ? 120.0 : 120.h,
                                   ),
                                   itemCount: controller.expenses.length,
                                   itemBuilder: (context, index) {
@@ -540,6 +546,7 @@ class TripDetailScreen extends GetView<TripDetailController> {
                                     return Card(
                                       margin: EdgeInsets.only(bottom: isDesktop ? 10.0 : 10.h),
                                       child: ListTile(
+                                        onTap: () => controller.goToExpenseDetail(exp.id),
                                         leading: CircleAvatar(
                                           backgroundColor: AppColors.primaryLight,
                                           child: Icon(
@@ -556,13 +563,46 @@ class TripDetailScreen extends GetView<TripDetailController> {
                                         'Paid by $paidByName • ${exp.splitType.name.toUpperCase()} split • $dateStr',
                                         style: AppTextStyles.bodySmall(isDark: isDark),
                                       ),
-                                      trailing: Text(
-                                        '₹${exp.totalAmount.toStringAsFixed(2)}',
-                                        style: TextStyle(
-                                          fontSize: isDesktop ? 15.0 : 15.sp,
-                                          fontWeight: FontWeight.bold,
-                                          color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-                                        ),
+                                      trailing: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            '₹${exp.totalAmount.toStringAsFixed(2)}',
+                                            style: TextStyle(
+                                              fontSize: isDesktop ? 15.0 : 15.sp,
+                                              fontWeight: FontWeight.bold,
+                                              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                                            ),
+                                          ),
+                                          PopupMenuButton<String>(
+                                            tooltip: 'Expense actions',
+                                            onSelected: (action) {
+                                              if (action == 'edit') {
+                                                controller.goToEditExpense(exp);
+                                              } else if (action == 'delete') {
+                                                _confirmDeleteExpense(context, exp);
+                                              }
+                                            },
+                                            itemBuilder: (context) => const [
+                                              PopupMenuItem(
+                                                value: 'edit',
+                                                child: ListTile(
+                                                  contentPadding: EdgeInsets.zero,
+                                                  leading: Icon(Icons.edit_outlined),
+                                                  title: Text('Edit'),
+                                                ),
+                                              ),
+                                              PopupMenuItem(
+                                                value: 'delete',
+                                                child: ListTile(
+                                                  contentPadding: EdgeInsets.zero,
+                                                  leading: Icon(Icons.delete_outline_rounded, color: AppColors.error),
+                                                  title: Text('Delete'),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
                                       ),
                                     ),
                                   );
@@ -599,6 +639,32 @@ class TripDetailScreen extends GetView<TripDetailController> {
     );
   }
 
+  void _confirmDeleteExpense(BuildContext context, TripExpenseModel expense) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete Expense'),
+        content: Text(
+          'Delete "${expense.description}"? Its shares will be removed and trip balances recalculated.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              controller.deleteExpense(expense.id);
+            },
+            child: const Text('Delete', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildAdvancesTab(BuildContext context, bool isDark, bool isDesktop) {
     if (controller.personBalances.isEmpty) {
       return Center(
@@ -611,7 +677,7 @@ class TripDetailScreen extends GetView<TripDetailController> {
         left: isDesktop ? 20.0 : 16.r,
         right: isDesktop ? 20.0 : 16.r,
         top: isDesktop ? 20.0 : 16.r,
-        bottom: 100.0,
+        bottom: isDesktop ? 120.0 : 120.h,
       ),
       itemCount: controller.personBalances.length,
       itemBuilder: (context, index) {

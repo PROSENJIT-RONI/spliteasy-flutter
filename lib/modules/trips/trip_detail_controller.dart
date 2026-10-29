@@ -186,4 +186,22 @@ class TripDetailController extends GetxController {
       'tripId': tId,
     })?.then((_) => loadTripData());
   }
+
+  void goToEditExpense(TripExpenseModel expense) {
+    final tId = trip.value?.id ?? tripId;
+    Get.toNamed('${Routes.addExpense}?tripId=$tId', arguments: {
+      'tripId': tId,
+      'existingExpense': expense,
+    })?.then((_) => loadTripData());
+  }
+
+  Future<void> deleteExpense(String expenseId) async {
+    try {
+      await _expenseService.deleteExpense(expenseId);
+      await loadTripData();
+      CustomToast.success('Expense deleted successfully!');
+    } catch (e) {
+      CustomToast.error('Failed to delete expense');
+    }
+  }
 }
